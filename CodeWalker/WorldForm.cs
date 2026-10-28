@@ -1329,10 +1329,11 @@ namespace CodeWalker
             const uint caqu = 0xFFFFFF00;
             //const uint cyel = 0xFF00FFFF;
 
-            if (ControlBrushEnabled && MouseRayCollision.Hit)
+            if (ControlBrushEnabled && MouseRayCollision.Hit && (ProjectForm != null))
             {
                 var arup = MouseRayCollision.Normal.GetPerpVec();
-                Renderer.RenderBrushRadiusOutline(MouseRayCollision.Position, MouseRayCollision.Normal, arup, ProjectForm.GetInstanceBrushRadius(), cgrn);
+                var brushcol = (Input.ShiftPressed && ProjectForm.IsPaintingProps()) ? cred : cgrn; //red when erasing painted props
+                Renderer.RenderBrushRadiusOutline(MouseRayCollision.Position, MouseRayCollision.Normal, arup, ProjectForm.GetInstanceBrushRadius(), brushcol);
             }
             if (MouseRayCollisionVisible && MouseRayCollision.Hit)
             {
@@ -5196,6 +5197,7 @@ namespace CodeWalker
                     ToolbarOpenButton.Enabled = true;
                     ToolbarProjectWindowButton.Enabled = true;
                     ToolsMenuProjectWindow.Enabled = true;
+                    ToolsMenuPaintProps.Enabled = true;
                     ToolsMenuCutsceneViewer.Enabled = true;
                     ToolsMenuAudioExplorer.Enabled = true;
                     ToolsMenuBinarySearch.Enabled = true;
@@ -6378,6 +6380,13 @@ namespace CodeWalker
                 {
                     MouseControlButtons |= e.Button;
                 }
+
+                if (ControlBrushEnabled && MouseLButtonDown && (ProjectForm != null) && ProjectForm.IsPaintingProps())
+                {
+                    //paint props on a single click as well as while dragging
+                    ProjectForm.PaintGrass(MouseRayCollision, Input);
+                    ControlBrushTimer = 0;
+                }
             }
 
             MouseX = e.X; //to stop jumps happening on mousedown, sometimes the last MouseMove event was somewhere else... (eg after clicked a menu)
@@ -7221,6 +7230,12 @@ namespace CodeWalker
         private void ToolsMenuProjectWindow_Click(object sender, EventArgs e)
         {
             ShowProjectForm();
+        }
+
+        private void ToolsMenuPaintProps_Click(object sender, EventArgs e)
+        {
+            ShowProjectForm();
+            ProjectForm?.ShowPaintPropsPanel(true);
         }
 
         private void ToolsMenuCutsceneViewer_Click(object sender, EventArgs e)

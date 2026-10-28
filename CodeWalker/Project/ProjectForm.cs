@@ -26,6 +26,7 @@ namespace CodeWalker.Project
         public ProjectExplorerPanel ProjectExplorer { get; set; }
         public ProjectPanel PreviewPanel { get; set; }
         public DeleteGrassPanel DeleteGrassPanel { get; set; }
+        public PaintPropsPanel PaintPropsPanel { get; set; }
 
         public GameFileCache GameFileCache { get; private set; }
         public RpfManager RpfMan { get; private set; }
@@ -363,6 +364,13 @@ namespace CodeWalker.Project
         {
             ShowPanel(promote,
                 () => { DeleteGrassPanel = new DeleteGrassPanel(this); return DeleteGrassPanel; }, //createFunc
+                (panel) => { panel.SetProject(CurrentProjectFile); panel.IsFloat = true; }, //updateFunc
+                (panel) => { return true; }); //findFunc
+        }
+        public void ShowPaintPropsPanel(bool promote)
+        {
+            ShowPanel(promote,
+                () => { PaintPropsPanel = new PaintPropsPanel(this); return PaintPropsPanel; }, //createFunc
                 (panel) => { panel.SetProject(CurrentProjectFile); panel.IsFloat = true; }, //updateFunc
                 (panel) => { return true; }); //findFunc
         }
@@ -1131,10 +1139,21 @@ namespace CodeWalker.Project
             {
                 return true;
             }
+            if (IsPaintingProps())
+            {
+                return true;
+            }
             return false;
+        }
+        public bool IsPaintingProps()
+        {
+            return (PaintPropsPanel != null) && PaintPropsPanel.PaintEnabled;
         }
         public float GetInstanceBrushRadius()
         {
+            if (IsPaintingProps())
+                return PaintPropsPanel.BrushRadius;
+
             var mode = (DeleteGrassPanel?.Mode ?? DeleteGrassPanel.DeleteGrassMode.None);
             if (mode == DeleteGrassPanel.DeleteGrassMode.None || mode == DeleteGrassPanel.DeleteGrassMode.Batch)
                 return CurrentGrassBatch?.BrushRadius ?? 0f;
@@ -2424,6 +2443,12 @@ namespace CodeWalker.Project
 
                 if (!mouseRay.Hit || !mouseRay.TestComplete) return;
 
+                if (IsPaintingProps())
+                {
+                    PaintPropsPanel.PaintAtMouse(mouseRay, input.ShiftPressed);
+                    return;
+                }
+
                 EditYmapGrassPanel batchPanel = FindPanel<EditYmapGrassPanel>(x => x.CurrentBatch == CurrentGrassBatch);
                 if (batchPanel == null && DeleteGrassPanel == null) return; // no relevant panels
 
@@ -2507,6 +2532,102 @@ namespace CodeWalker.Project
                     }
                 }
             }
+        }
+
+        public YmapFile GetPaintPropsTargetYmap()
+        {
+            //props are only painted into a ymap that's already part of the project.
+            if (CurrentYmapFile == null) return null;
+            if (!YmapExistsInProject(CurrentYmapFile)) return null;
+            return CurrentYmapFile;
+        }
+        public string GetSelectedEntityArchetypeName()
+        {
+            if (CurrentEntity == null) return null;
+            if (CurrentEntity.Archetype != null) return CurrentEntity.Archetype.Name;
+            return CurrentEntity._CEntityDef.archetypeName.ToString();
+        }
+        public YmapEntityDef PaintEntity(YmapFile ymap, Archetype arch, Vector3 pos, Quaternion ori, float scale)
+        {
+            if ((ymap == null) || (arch == null)) return null;
+
+            CEntityDef cent = new CEntityDef();
+            cent.archetypeName = arch.Hash;
+            cent.position = pos;
+            cent.rotation = new Vector4(0, 0, 0, 1);
+            cent.scaleXY = 1.0f;
+            cent.scaleZ = 1.0f;
+            cent.flags = 32;
+            cent.parentIndex = -1;
+            cent.lodDist = (arch.LodDist > 0) ? arch.LodDist : 200.0f;
+            cent.lodLevel = rage__eLodType.LODTYPES_DEPTH_ORPHANHD;
+            cent.priorityLevel = rage__ePriorityLevel.PRI_REQUIRED;
+            cent.ambientOcclusionMultiplier = 255;
+            cent.artificialAmbientOcclusion = 255;
+
+            YmapEntityDef ent = new YmapEntityDef(ymap, 0, ref cent);
+            ent.SetArchetype(arch);
+            ent.SetOrientation(ori);
+            ent.SetScale(new Vector3(scale));
+
+            if (WorldForm != null)
+            {
+                lock (WorldForm.RenderSyncRoot) //don't try to do this while rendering...
+                {
+                    ymap.AddEntity(ent);
+                }
+            }
+            else
+            {
+                ymap.AddEntity(ent);
+            }
+
+            ProjectExplorer?.AddEntityTreeNode(ent);
+            ProjectExplorer?.SetYmapHasChanged(ymap, true);
+
+            return ent;
+        }
+        public int ErasePaintedEntities(YmapFile ymap, Vector3 center, float radius, ICollection<uint> archetypeHashes)
+        {
+            if ((ymap?.AllEntities == null) || (ymap.RootEntities == null)) return 0;
+            if ((archetypeHashes == null) || (archetypeHashes.Count == 0)) return 0;
+
+            var remove = new List<YmapEntityDef>();
+            foreach (var ent in ymap.AllEntities)
+            {
+                if (ent._CEntityDef.numChildren != 0) return 0; //removing would break LOD linkages, same rule as DeleteYmapEntity
+                if (!archetypeHashes.Contains(ent._CEntityDef.archetypeName.Hash)) continue;
+                if (Vector3.Distance(ent.Position, center) > radius) continue;
+                remove.Add(ent);
+            }
+            if (remove.Count == 0) return 0;
+
+            var oldents = ymap.AllEntities;
+            object syncroot = (WorldForm != null) ? WorldForm.RenderSyncRoot : new object();
+            lock (syncroot)
+            {
+                foreach (var ent in remove)
+                {
+                    ymap.RemoveEntity(ent);
+                }
+                //RemoveEntity only remembers the previous array, so restore the full original list
+                //for the LOD manager or entities removed earlier in this batch would keep rendering.
+                ymap.LodManagerOldEntities = oldents;
+            }
+
+            foreach (var ent in remove)
+            {
+                ProjectExplorer?.RemoveEntityTreeNode(ent);
+                ClosePanel((EditYmapEntityPanel p) => { return p.Tag == ent; });
+                if (CurrentEntity == ent)
+                {
+                    CurrentEntity = null;
+                    WorldForm?.SelectItem(null);
+                }
+            }
+            ProjectExplorer?.SetYmapHasChanged(ymap, true);
+
+            return remove.Count;
         }
 
         public YmapCarGen NewCarGen(YmapCarGen copy = null, bool copyPosition = false, bool selectNew = true)
@@ -9816,6 +9937,10 @@ namespace CodeWalker.Project
         private void ToolsDeleteGrassMenu_Click(object sender, EventArgs e)
         {
             ShowDeleteGrassPanel(true);
+        }
+        private void ToolsPaintPropsMenu_Click(object sender, EventArgs e)
+        {
+            ShowPaintPropsPanel(true);
         }
         private void OptionsRenderGtavMapMenu_Click(object sender, EventArgs e)
         {
