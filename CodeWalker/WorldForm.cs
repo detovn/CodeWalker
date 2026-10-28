@@ -6808,6 +6808,10 @@ namespace CodeWalker
                     {
                         DeleteItem();
                     }
+                    if (k == Keys.L)
+                    {
+                        SelectConnected();
+                    }
                     if (ProjectForm != null)
                     {
                         //paint tool keys - B toggles painting (opening the panel if needed), the rest need the panel to be open.
@@ -7377,6 +7381,93 @@ namespace CodeWalker
             ShowProjectForm();
         }
 
+        private void AddConnectedLodTree(YmapEntityDef e, HashSet<YmapEntityDef> set, int depth)
+        {
+            if ((e == null) || (depth > 32) || !set.Add(e)) return;
+            var kids = e.ChildrenMerged ?? e.Children;
+            if (kids == null) return;
+            foreach (var kid in kids) AddConnectedLodTree(kid, set, depth + 1);
+        }
+        public void SelectConnected()
+        {
+            //select everything linked to the current selection: its whole LOD chain (HD to SLOD), all entities
+            //of its interior (MLO), and box occluders sitting on top of that group. Read-only, edits no files.
+            var seeds = new List<YmapEntityDef>();
+            var sel = SelectedItem;
+            if (sel.MultipleSelectionItems != null)
+            {
+                foreach (var it in sel.MultipleSelectionItems)
+                {
+                    if (it.EntityDef != null) seeds.Add(it.EntityDef);
+                }
+            }
+            else if (sel.EntityDef != null)
+            {
+                seeds.Add(sel.EntityDef);
+            }
+            if (seeds.Count == 0)
+            {
+                MessageBox.Show("Select an entity first, then use Select Connected (L).");
+                return;
+            }
+
+            var set = new HashSet<YmapEntityDef>();
+            foreach (var seed in seeds)
+            {
+                var mlo = seed.MloParent ?? ((seed.MloInstance != null) ? seed : null);
+                if (mlo != null)
+                {
+                    set.Add(mlo);
+                    if (mlo.MloInstance?.Entities != null)
+                    {
+                        foreach (var me in mlo.MloInstance.Entities) set.Add(me);
+                    }
+                }
+                if (seed.MloParent == null)
+                {
+                    var root = seed;
+                    for (int n = 0; (root.Parent != null) && (n < 64); n++) root = root.Parent;
+                    AddConnectedLodTree(root, set, 0);
+                }
+            }
+
+            var items = new List<MapSelection>();
+            var bb = new BoundingBox(new Vector3(float.MaxValue), new Vector3(float.MinValue));
+            foreach (var e in set)
+            {
+                items.Add(MapSelection.FromProjectObject(this, e));
+                bb.Minimum = Vector3.Min(bb.Minimum, e.Position);
+                bb.Maximum = Vector3.Max(bb.Maximum, e.Position);
+            }
+            int entcount = items.Count;
+
+            //box occluders on top of the group (from any ymap currently loaded in view)
+            var pad = new Vector3(10.0f);
+            var area = new BoundingBox(bb.Minimum - pad, bb.Maximum + pad);
+            YmapFile[] ymaps;
+            lock (RenderSyncRoot)
+            {
+                ymaps = Renderer.VisibleYmaps.ToArray();
+            }
+            foreach (var ymap in ymaps)
+            {
+                if (ymap?.BoxOccluders == null) continue;
+                foreach (var bo in ymap.BoxOccluders)
+                {
+                    if (area.Contains(bo.Position) != ContainmentType.Disjoint)
+                    {
+                        items.Add(MapSelection.FromProjectObject(this, bo));
+                    }
+                }
+            }
+
+            SelectMulti(items.ToArray());
+            UpdateStatus(entcount + " connected entities and " + (items.Count - entcount) + " occluders selected");
+        }
+        private void ToolsMenuSelectConnected_Click(object sender, EventArgs e)
+        {
+            SelectConnected();
+        }
         private void ToolsMenuPaintProps_Click(object sender, EventArgs e)
         {
             ShowProjectForm();

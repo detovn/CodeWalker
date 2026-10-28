@@ -229,6 +229,7 @@ namespace CodeWalker
             this.ToolsMenuSelectionInfo = new System.Windows.Forms.ToolStripMenuItem();
             this.ToolsMenuProjectWindow = new System.Windows.Forms.ToolStripMenuItem();
             this.ToolsMenuPaintProps = new System.Windows.Forms.ToolStripMenuItem();
+            this.ToolsMenuSelectConnected = new System.Windows.Forms.ToolStripMenuItem();
             this.ToolsMenuCutsceneViewer = new System.Windows.Forms.ToolStripMenuItem();
             this.ToolsMenuAudioExplorer = new System.Windows.Forms.ToolStripMenuItem();
             this.ToolsMenuWorldSearch = new System.Windows.Forms.ToolStripMenuItem();
@@ -2837,6 +2838,7 @@ namespace CodeWalker
             this.ToolsMenuSelectionInfo,
             this.ToolsMenuProjectWindow,
             this.ToolsMenuPaintProps,
+            this.ToolsMenuSelectConnected,
             this.ToolsMenuCutsceneViewer,
             this.ToolsMenuAudioExplorer,
             this.ToolsMenuWorldSearch,
@@ -2895,6 +2897,14 @@ namespace CodeWalker
             this.ToolsMenuPaintProps.Size = new System.Drawing.Size(170, 22);
             this.ToolsMenuPaintProps.Text = "Paint props / grass...";
             this.ToolsMenuPaintProps.Click += new System.EventHandler(this.ToolsMenuPaintProps_Click);
+            //
+            // ToolsMenuSelectConnected
+            //
+            this.ToolsMenuSelectConnected.Name = "ToolsMenuSelectConnected";
+            this.ToolsMenuSelectConnected.ShortcutKeyDisplayString = "L";
+            this.ToolsMenuSelectConnected.Size = new System.Drawing.Size(170, 22);
+            this.ToolsMenuSelectConnected.Text = "Select connected (LOD / MLO / occluders)";
+            this.ToolsMenuSelectConnected.Click += new System.EventHandler(this.ToolsMenuSelectConnected_Click);
             // 
             // ToolsMenuCutsceneViewer
             // 
@@ -3957,6 +3967,7 @@ namespace CodeWalker
         private System.Windows.Forms.TabPage OptionsRenderTabPage;
         private System.Windows.Forms.ToolStripMenuItem ToolsMenuProjectWindow;
         private System.Windows.Forms.ToolStripMenuItem ToolsMenuPaintProps;
+        private System.Windows.Forms.ToolStripMenuItem ToolsMenuSelectConnected;
         private System.Windows.Forms.CheckBox WaterQuadsCheckBox;
         private System.Windows.Forms.ComboBox CameraModeComboBox;
         private System.Windows.Forms.Label label24;

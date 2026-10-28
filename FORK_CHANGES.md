@@ -40,6 +40,17 @@ Pick a folder of custom models and it builds the whole `.ytyp` for you in one go
   It asks before doing anything, then tells you how many were added, skipped, or couldn't be read.
 * Save the `.ytyp` afterwards. The model files still need to be streamed with it under the same names.
 
+### Select Connected (written for this fork)
+Select a model in the main map window and press **L** (or **Tools → Select connected**). It selects everything linked to it,
+so you can see, move or delete the whole group together:
+
+* its full LOD chain, from the HD model up through the LOD and SLOD parents and every sibling underneath,
+* if it's an interior (MLO), every entity inside it,
+* box occluders in view that sit on top of that group (within 10 m).
+
+It only changes what's selected; it never edits or splits any ymap, so game files stay untouched. Occlusion *model*
+triangles and grass/lights aren't included.
+
 ### Precise model selection (written for this fork)
 Right-click selection used to pick whatever model's *invisible box* was in front, which is why clicking around a tree or a
 fence was a guessing game. It now tests the model's real triangles, so you select the thing your cursor is actually on. If
