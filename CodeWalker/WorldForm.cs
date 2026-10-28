@@ -3009,7 +3009,7 @@ namespace CodeWalker
                         {
                             var light = ll.LodLights[i];
                             if ((light.Position - camera.Position).Length() > dmax) continue;
-                            MapBox lmb = new();
+                            MapBox lmb = new MapBox();
                             lmb.CamRelPos = light.Position - camera.Position;
                             lmb.BBMin = new Vector3(-0.5f);
                             lmb.BBMax = new Vector3(0.5f);
