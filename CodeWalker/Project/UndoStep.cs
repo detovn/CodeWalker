@@ -165,6 +165,48 @@ namespace CodeWalker.Project
 
 
 
+    public class SmartPlacementUndoStep : UndoStep
+    {
+        private readonly List<SmartPlacementItem> Items;
+
+        public SmartPlacementUndoStep(IEnumerable<SmartPlacementItem> items)
+        {
+            //copies, so later previews don't change what this step remembers
+            Items = items.Select(i => new SmartPlacementItem
+            {
+                Entity = i.Entity,
+                OldPos = i.OldPos,
+                OldRot = i.OldRot,
+                NewPos = i.NewPos,
+                NewRot = i.NewRot,
+            }).ToList();
+        }
+
+        private void Apply(WorldForm wf, bool redo)
+        {
+            foreach (var i in Items)
+            {
+                i.Entity.SetOrientation(redo ? i.NewRot : i.OldRot);
+                i.Entity.SetPosition(redo ? i.NewPos : i.OldPos);
+            }
+            wf.RefreshAfterPlacement(Items.Select(i => i.Entity).ToList());
+        }
+
+        public override void Undo(WorldForm wf, ref MapSelection sel)
+        {
+            Apply(wf, false);
+        }
+
+        public override void Redo(WorldForm wf, ref MapSelection sel)
+        {
+            Apply(wf, true);
+        }
+
+        public override string ToString()
+        {
+            return Items.Count + " entities: Smart placement";
+        }
+    }
     public class EntityPositionUndoStep : UndoStep
     {
         public YmapEntityDef Entity { get; set; }

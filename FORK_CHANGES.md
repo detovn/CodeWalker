@@ -51,6 +51,26 @@ so you can see, move or delete the whole group together:
 It only changes what's selected; it never edits or splits any ymap, so game files stay untouched. Occlusion *model*
 triangles and grass/lights aren't included.
 
+### Smart placement and alignment (written for this fork)
+Select two or more entities (Ctrl+click; the last one you click is the **anchor**) and open **Tools → Smart placement &
+alignment...**. Every button only changes a **preview**: translucent ghost boxes show where each entity would end up, and
+nothing moves until you press **Apply**. Apply is one undo step (Ctrl+Z), and **Reset preview** throws the preview away.
+Commands can be chained (e.g. Align bottom, then Equal spacing, then Apply).
+
+* **Align** left/center/right, front/center/back, bottom/center/top, to the whole group or to the anchor.
+* **Equal spacing** along X, Y or Z: equal gaps between the models (or equal centres). Needs three or more.
+* **Match rotation** (full, or heading only keeping each model's tilt) and **Face anchor** (turns chairs towards a table;
+  Flip is for models that face the other way).
+* **Fit to surface** drops each entity onto the collision or model underneath it, ignoring the entities being moved. It can
+  also tilt to follow a slope (up to 45 degrees).
+* **Snap to wall** pushes each entity sideways until its bounds touch the nearest surface within the search distance, and
+  can turn it to face away from the wall (doors, pictures, shelves, wall lights).
+* **Move without changing elevation** makes dragging the move widget only slide things sideways.
+
+Honest limits: it recognises surfaces through collision and model bounds, so it needs collision loaded near the entities.
+Doors are lined up against the wall they're next to, but it does not detect the actual opening in a wall, and chairs are
+turned towards the anchor but not pushed under the table to a set gap. Works on entities (not occluders, lights, etc.).
+
 ### Precise model selection (written for this fork)
 Right-click selection used to pick whatever model's *invisible box* was in front, which is why clicking around a tree or a
 fence was a guessing game. It now tests the model's real triangles, so you select the thing your cursor is actually on. If

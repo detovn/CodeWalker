@@ -16,6 +16,7 @@ using CodeWalker.Rendering;
 using CodeWalker.GameFiles;
 using CodeWalker.Properties;
 using CodeWalker.Tools;
+using CodeWalker.Forms;
 
 namespace CodeWalker
 {
@@ -454,6 +455,8 @@ namespace CodeWalker
             UpdateMouseHits();
 
             RenderSelection();
+
+            RenderSmartPlacementPreview();
 
             RenderMoused();
 
@@ -1843,7 +1846,10 @@ namespace CodeWalker
         {
             //called during UpdateWidgets()
 
-            
+            if (LockElevation)
+            {
+                newpos.Z = SelectedItem.WidgetPosition.Z; //only move sideways
+            }
 
             if (SnapMultiSelectEach && SelectedItem.MultipleSelectionItems != null)
             {
@@ -1854,6 +1860,7 @@ namespace CodeWalker
                     if ((item.CollisionVertex != null) || (item.CollisionPoly != null)) continue;//skip collision verts/polys
 
                     Vector3 tempNewPos = SnapPosition(item.WidgetPosition + dpos);
+                    if (LockElevation) tempNewPos.Z = item.WidgetPosition.Z;
 
                     if (tempNewPos == item.WidgetPosition) continue;
 
@@ -1865,6 +1872,7 @@ namespace CodeWalker
             else
             {
                 newpos = SnapPosition(newpos);
+                if (LockElevation) newpos.Z = SelectedItem.WidgetPosition.Z;
 
                 if (newpos == oldpos) return;
 
@@ -7463,6 +7471,124 @@ namespace CodeWalker
 
             SelectMulti(items.ToArray());
             UpdateStatus(entcount + " connected entities and " + (items.Count - entcount) + " occluders selected");
+        }
+        public SmartPlacement SmartPlacementSession;
+        public bool LockElevation;
+        private SmartPlacementForm SmartPlacementWindow;
+
+        private void ToolsMenuSmartPlacement_Click(object sender, EventArgs e)
+        {
+            if ((SmartPlacementWindow == null) || SmartPlacementWindow.IsDisposed)
+            {
+                SmartPlacementWindow = new SmartPlacementForm(this);
+                SmartPlacementWindow.FormClosed += (s, a) =>
+                {
+                    SmartPlacementSession = null;
+                    SmartPlacementWindow = null;
+                    LockElevation = false;
+                };
+                SmartPlacementWindow.Show(this);
+            }
+            SmartPlacementWindow.Activate();
+            BeginSmartPlacement();
+            SmartPlacementWindow.UpdateInfo();
+        }
+        public SmartPlacement BeginSmartPlacement()
+        {
+            var ents = new List<YmapEntityDef>();
+            YmapEntityDef anchor = null;
+            var sel = SelectedItem;
+            if (sel.MultipleSelectionItems != null)
+            {
+                foreach (var it in sel.MultipleSelectionItems)
+                {
+                    if (it.EntityDef == null) continue;
+                    ents.Add(it.EntityDef);
+                    anchor = it.EntityDef;
+                }
+            }
+            else if (sel.EntityDef != null)
+            {
+                ents.Add(sel.EntityDef);
+                anchor = sel.EntityDef;
+            }
+            lock (RenderSyncRoot)
+            {
+                SmartPlacementSession = (ents.Count > 0) ? new SmartPlacement(ents, anchor) : null;
+            }
+            return SmartPlacementSession;
+        }
+        public int CommitSmartPlacement()
+        {
+            var sp = SmartPlacementSession;
+            if (sp == null) return 0;
+            var changed = sp.Items.Where(i => i.Changed).ToList();
+            if (changed.Count == 0) return 0;
+            var step = new SmartPlacementUndoStep(changed);
+            lock (RenderSyncRoot)
+            {
+                foreach (var i in changed)
+                {
+                    i.Entity.SetOrientation(i.NewRot);
+                    i.Entity.SetPosition(i.NewPos);
+                }
+            }
+            RedoSteps.Clear();
+            UndoSteps.Push(step);
+            UpdateUndoUI();
+            RefreshAfterPlacement(changed.Select(i => i.Entity).ToList());
+            foreach (var i in changed)
+            {
+                i.OldPos = i.NewPos;
+                i.OldRot = i.NewRot;
+            }
+            return changed.Count;
+        }
+        public void RefreshAfterPlacement(List<YmapEntityDef> ents)
+        {
+            if (SelectedItem.MultipleSelectionItems != null)
+            {
+                SelectMulti(SelectedItem.MultipleSelectionItems);
+            }
+            else if (SelectedItem.EntityDef != null)
+            {
+                SetWidgetPosition(SelectedItem.EntityDef.WidgetPosition);
+                SetWidgetRotation(SelectedItem.EntityDef.WidgetOrientation);
+            }
+            if (ProjectForm != null)
+            {
+                var ms = new MapSelection();
+                ms.SetMultipleSelectionItems(ents.Select(e => MapSelection.FromProjectObject(this, e)).ToArray());
+                ProjectForm.OnWorldSelectionModified(ms);
+            }
+            var sp = SmartPlacementSession;
+            if (sp != null)
+            {
+                foreach (var i in sp.Items)
+                {
+                    i.OldPos = i.NewPos = i.Entity.Position;
+                    i.OldRot = i.NewRot = i.Entity.Orientation;
+                }
+            }
+            SmartPlacementWindow?.UpdateInfo();
+        }
+        private void RenderSmartPlacementPreview()
+        {
+            //ghost boxes where the previewed entities would end up
+            var sp = SmartPlacementSession;
+            if (sp == null) return;
+            foreach (var i in sp.Items)
+            {
+                if (!i.Changed) continue;
+                var arch = i.Entity.Archetype;
+                if (arch == null) continue;
+                var camrel = i.NewPos - camera.Position;
+                var bbmin = arch.BBMin;
+                var bbmax = arch.BBMax;
+                var scale = i.Entity.Scale;
+                var ori = i.NewRot;
+                Renderer.RenderMouseHit(BoundsShaderMode.Box, ref camrel, ref bbmin, ref bbmax, ref scale, ref ori, 0.0f);
+            }
         }
         private void ToolsMenuSelectConnected_Click(object sender, EventArgs e)
         {

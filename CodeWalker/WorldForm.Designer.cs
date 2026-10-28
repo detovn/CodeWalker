@@ -230,6 +230,7 @@ namespace CodeWalker
             this.ToolsMenuProjectWindow = new System.Windows.Forms.ToolStripMenuItem();
             this.ToolsMenuPaintProps = new System.Windows.Forms.ToolStripMenuItem();
             this.ToolsMenuSelectConnected = new System.Windows.Forms.ToolStripMenuItem();
+            this.ToolsMenuSmartPlacement = new System.Windows.Forms.ToolStripMenuItem();
             this.ToolsMenuCutsceneViewer = new System.Windows.Forms.ToolStripMenuItem();
             this.ToolsMenuAudioExplorer = new System.Windows.Forms.ToolStripMenuItem();
             this.ToolsMenuWorldSearch = new System.Windows.Forms.ToolStripMenuItem();
@@ -2839,6 +2840,7 @@ namespace CodeWalker
             this.ToolsMenuProjectWindow,
             this.ToolsMenuPaintProps,
             this.ToolsMenuSelectConnected,
+            this.ToolsMenuSmartPlacement,
             this.ToolsMenuCutsceneViewer,
             this.ToolsMenuAudioExplorer,
             this.ToolsMenuWorldSearch,
@@ -2905,6 +2907,13 @@ namespace CodeWalker
             this.ToolsMenuSelectConnected.Size = new System.Drawing.Size(170, 22);
             this.ToolsMenuSelectConnected.Text = "Select connected (LOD / MLO / occluders)";
             this.ToolsMenuSelectConnected.Click += new System.EventHandler(this.ToolsMenuSelectConnected_Click);
+            //
+            // ToolsMenuSmartPlacement
+            //
+            this.ToolsMenuSmartPlacement.Name = "ToolsMenuSmartPlacement";
+            this.ToolsMenuSmartPlacement.Size = new System.Drawing.Size(170, 22);
+            this.ToolsMenuSmartPlacement.Text = "Smart placement && alignment...";
+            this.ToolsMenuSmartPlacement.Click += new System.EventHandler(this.ToolsMenuSmartPlacement_Click);
             // 
             // ToolsMenuCutsceneViewer
             // 
@@ -3968,6 +3977,7 @@ namespace CodeWalker
         private System.Windows.Forms.ToolStripMenuItem ToolsMenuProjectWindow;
         private System.Windows.Forms.ToolStripMenuItem ToolsMenuPaintProps;
         private System.Windows.Forms.ToolStripMenuItem ToolsMenuSelectConnected;
+        private System.Windows.Forms.ToolStripMenuItem ToolsMenuSmartPlacement;
         private System.Windows.Forms.CheckBox WaterQuadsCheckBox;
         private System.Windows.Forms.ComboBox CameraModeComboBox;
         private System.Windows.Forms.Label label24;
