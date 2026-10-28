@@ -51,6 +51,39 @@ so you can see, move or delete the whole group together:
 It only changes what's selected; it never edits or splits any ymap, so game files stay untouched. Occlusion *model*
 triangles and grass/lights aren't included.
 
+### MLO Doctor (written for this fork)
+Select an interior (MLO) in the world, or any entity inside one, and open **Tools → MLO Doctor...**. It scans the whole
+interior and lists every problem it finds. Click a problem and it's drawn in the 3D view in red (the cause) with the fix
+shown in green. **Go to** flies the camera there.
+
+What it checks:
+* **Rooms:** inside-out or flat bounds, rooms with nothing attached, stale portal counts, rooms that overlap heavily, and a
+  missing or oddly named room 0 (the "outside" room).
+* **Portals:** fewer than 3 corners, corners listed in a twisted (bow-tie) order, repeated corners, portals that aren't flat,
+  portals pointing at rooms that don't exist, joining a room to itself, not touching the rooms they join, duplicates, and
+  portals facing the opposite way to the rest.
+* **Room graph:** no portal to the outside, and rooms that can't be reached from outside through any chain of portals.
+* **Entities:** not attached to any room, attached to several, sitting outside their room's bounds (with the room it probably
+  belongs in), missing models, and entity sets whose room locations don't match their entities.
+* **References:** attached-object numbers that point at entities that no longer exist.
+* **Collision:** missing collision, and rooms that stick out past the collision.
+
+Safe fixes (each shown as a preview first): re-sort twisted corners, flatten a warped portal, reverse a portal's winding,
+move an entity to the room that contains it, remove broken references, recalculate portal counts. **Apply this fix** does
+one; **Apply all safe fixes** asks first. Fixes are only available for interiors whose ytyp is in your project, because game
+files can't be edited, and there's no undo, so save a copy of the ytyp first.
+
+**Visibility simulation:** pick the room (or use the camera position) and it follows the portal graph, narrowing the view
+through each portal in turn, to show which rooms can be seen from that spot, which are connected but hidden, and whether the
+outside shows. Visible rooms are drawn green, hidden-but-connected orange. That helps with interiors that vanish, and ones
+that draw far more rooms than they need to. It's an approximation (portals count as see-through from both sides, and the
+engine has its own extra rules), so confirm anything important in game.
+
+Honest limits: tested on a hand-built sample interior, not on a wide range of real MLOs. The doctor trusts the room bounds
+stored in the file, and vanilla interiors don't always have tidy ones, so on game interiors expect some false alarms about
+entities "outside their room". The orientation check is a consistency check (it flags portals that disagree with the
+majority); whether the majority is "right" needs confirming in game.
+
 ### Smart placement and alignment (written for this fork)
 Select two or more entities (Ctrl+click; the last one you click is the **anchor**) and open **Tools → Smart placement &
 alignment...**. Every button only changes a **preview**: translucent ghost boxes show where each entity would end up, and

@@ -3728,6 +3728,15 @@ namespace CodeWalker.Project
             CurrentArchetype = archetype;
 
         }
+        public void OnMloEdited(MloArchetype mlo)
+        {
+            //called by the MLO Doctor after it edits an interior that belongs to a project ytyp
+            var ytyp = mlo?.Ytyp;
+            if (ytyp == null) return;
+            ytyp.HasChanged = true;
+            SetProjectHasChanged(true);
+            ProjectExplorer?.UpdateYtypTreeNodeText(ytyp);
+        }
         public void AutoSetupYtyp()
         {
             //scan a folder of models and build archetypes for all of them in one go

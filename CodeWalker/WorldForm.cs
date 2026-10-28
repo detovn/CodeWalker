@@ -458,6 +458,8 @@ namespace CodeWalker
 
             RenderSmartPlacementPreview();
 
+            RenderMloDoctorOverlay();
+
             RenderMoused();
 
             Renderer.RenderQueued();
@@ -7472,6 +7474,119 @@ namespace CodeWalker
             SelectMulti(items.ToArray());
             UpdateStatus(entcount + " connected entities and " + (items.Count - entcount) + " occluders selected");
         }
+        private MloDoctorForm MloDoctorWindow;
+        public ProjectForm ProjectFormInstance { get { return ProjectForm; } }
+        public Vector3 CameraPosition { get { return camera.Position; } }
+
+        private void ToolsMenuMloDoctor_Click(object sender, EventArgs e)
+        {
+            //find the placed interior from the selection (the interior itself, or anything inside it)
+            YmapEntityDef inst = null;
+            var cands = new List<MapSelection>();
+            if (SelectedItem.MultipleSelectionItems != null) cands.AddRange(SelectedItem.MultipleSelectionItems);
+            else cands.Add(SelectedItem);
+            foreach (var c in cands)
+            {
+                var ent = c.MloEntityDef ?? c.EntityDef;
+                if (ent == null) continue;
+                if (ent.MloInstance != null) inst = ent;
+                else if (ent.MloParent != null) inst = ent.MloParent;
+                if (inst != null) break;
+            }
+            if ((inst == null) && (MloDoctorWindow == null))
+            {
+                MessageBox.Show("Select an interior (MLO) in the world first - or any entity inside one - then open the MLO Doctor.");
+                return;
+            }
+            if ((MloDoctorWindow == null) || MloDoctorWindow.IsDisposed)
+            {
+                MloDoctorWindow = new MloDoctorForm(this, inst);
+                MloDoctorWindow.FormClosed += (s, a) => { MloDoctorWindow = null; };
+                MloDoctorWindow.Show(this);
+            }
+            else if ((inst != null) && (inst != MloDoctorWindow.Instance))
+            {
+                MloDoctorWindow.SetInstance(inst);
+            }
+            MloDoctorWindow.Activate();
+        }
+        public void NotifyMloEdited(MloArchetype mlo)
+        {
+            ProjectForm?.OnMloEdited(mlo);
+        }
+        private void RenderMloDoctorOverlay()
+        {
+            const uint cred = 0xFF0000FF;
+            const uint cgrn = 0xFF00FF00;
+            const uint cyel = 0xFF00FFFF;
+            const uint cora = 0xFF0080FF;
+            const uint ccyn = 0xFFFFFF00;
+            const uint cwht = 0xFFFFFFFF;
+
+            var w = MloDoctorWindow;
+            if ((w == null) || w.IsDisposed) return;
+            var inst = w.Instance;
+            var mlo = w.Mlo;
+            if ((inst == null) || (mlo == null)) return;
+            var issues = w.Issues;
+            var sel = w.SelectedIssue;
+            var vis = w.Visibility;
+
+            Action<List<Vector3>, uint> draw = (segs, col) =>
+            {
+                if (segs == null) return;
+                for (int i = 0; i + 1 < segs.Count; i += 2)
+                {
+                    var p1 = new VertexTypePC { Colour = col, Position = inst.Position + inst.Orientation.Multiply(segs[i]) };
+                    var p2 = new VertexTypePC { Colour = col, Position = inst.Position + inst.Orientation.Multiply(segs[i + 1]) };
+                    Renderer.SelectionLineVerts.Add(p1);
+                    Renderer.SelectionLineVerts.Add(p2);
+                }
+            };
+
+            if (w.ShowAll && (issues != null))
+            {
+                foreach (var iss in issues)
+                {
+                    if (iss == sel) continue;
+                    draw(iss.Highlight, iss.Severity == MloIssueSeverity.Error ? cora : cyel);
+                }
+            }
+            if (sel != null)
+            {
+                draw(sel.Highlight, cred);
+                draw(sel.Preview, cgrn);
+            }
+            if ((vis != null) && w.HasEye && (mlo.rooms != null))
+            {
+                var segs = new List<Vector3>();
+                foreach (var kvp in vis.Hops)
+                {
+                    int r = kvp.Key;
+                    if ((r <= 0) || (r >= mlo.rooms.Length)) continue;
+                    var room = mlo.rooms[r];
+                    segs.Clear();
+                    MloDoctor.AddBox(segs, room.BBMin, room.BBMax);
+                    draw(segs, (r == vis.StartRoom) ? ccyn : vis.Visible.Contains(r) ? cgrn : cora);
+                }
+                if (mlo.portals != null)
+                {
+                    foreach (var pi in vis.TraversedPortals)
+                    {
+                        if (pi >= mlo.portals.Length) continue;
+                        var corners = mlo.portals[pi].Corners;
+                        if (corners == null) continue;
+                        segs.Clear();
+                        MloDoctor.AddPoly(segs, corners.Select(c => new Vector3(c.X, c.Y, c.Z)).ToArray());
+                        draw(segs, cyel);
+                    }
+                }
+                segs.Clear();
+                MloDoctor.AddCross(segs, w.Eye, 0.4f);
+                draw(segs, cwht);
+            }
+        }
+
         public SmartPlacement SmartPlacementSession;
         public bool LockElevation;
         private SmartPlacementForm SmartPlacementWindow;

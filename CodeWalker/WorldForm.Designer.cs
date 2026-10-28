@@ -231,6 +231,7 @@ namespace CodeWalker
             this.ToolsMenuPaintProps = new System.Windows.Forms.ToolStripMenuItem();
             this.ToolsMenuSelectConnected = new System.Windows.Forms.ToolStripMenuItem();
             this.ToolsMenuSmartPlacement = new System.Windows.Forms.ToolStripMenuItem();
+            this.ToolsMenuMloDoctor = new System.Windows.Forms.ToolStripMenuItem();
             this.ToolsMenuCutsceneViewer = new System.Windows.Forms.ToolStripMenuItem();
             this.ToolsMenuAudioExplorer = new System.Windows.Forms.ToolStripMenuItem();
             this.ToolsMenuWorldSearch = new System.Windows.Forms.ToolStripMenuItem();
@@ -2841,6 +2842,7 @@ namespace CodeWalker
             this.ToolsMenuPaintProps,
             this.ToolsMenuSelectConnected,
             this.ToolsMenuSmartPlacement,
+            this.ToolsMenuMloDoctor,
             this.ToolsMenuCutsceneViewer,
             this.ToolsMenuAudioExplorer,
             this.ToolsMenuWorldSearch,
@@ -2914,6 +2916,13 @@ namespace CodeWalker
             this.ToolsMenuSmartPlacement.Size = new System.Drawing.Size(170, 22);
             this.ToolsMenuSmartPlacement.Text = "Smart placement && alignment...";
             this.ToolsMenuSmartPlacement.Click += new System.EventHandler(this.ToolsMenuSmartPlacement_Click);
+            //
+            // ToolsMenuMloDoctor
+            //
+            this.ToolsMenuMloDoctor.Name = "ToolsMenuMloDoctor";
+            this.ToolsMenuMloDoctor.Size = new System.Drawing.Size(170, 22);
+            this.ToolsMenuMloDoctor.Text = "MLO Doctor...";
+            this.ToolsMenuMloDoctor.Click += new System.EventHandler(this.ToolsMenuMloDoctor_Click);
             // 
             // ToolsMenuCutsceneViewer
             // 
@@ -3978,6 +3987,7 @@ namespace CodeWalker
         private System.Windows.Forms.ToolStripMenuItem ToolsMenuPaintProps;
         private System.Windows.Forms.ToolStripMenuItem ToolsMenuSelectConnected;
         private System.Windows.Forms.ToolStripMenuItem ToolsMenuSmartPlacement;
+        private System.Windows.Forms.ToolStripMenuItem ToolsMenuMloDoctor;
         private System.Windows.Forms.CheckBox WaterQuadsCheckBox;
         private System.Windows.Forms.ComboBox CameraModeComboBox;
         private System.Windows.Forms.Label label24;
