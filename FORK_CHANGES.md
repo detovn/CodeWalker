@@ -27,6 +27,19 @@ Open it from **Ymap → Paint Props / Grass...** (right under *New Grass Batch*)
 * It paints into the ymap that's selected in the Project window, and that ymap has to already be in your project.
 * There is no undo for painting yet — erase with Ctrl + Shift instead.
 
+### Auto Setup Ytyp from Folder (written for this fork)
+Open it from **Tools → Auto Setup Ytyp from Folder...** or **Ytyp → Auto Setup from Folder...** in the Project window.
+Pick a folder of custom models and it builds the whole `.ytyp` for you in one go, instead of adding archetypes one by one:
+
+* Finds every `.ydr` and `.yft` in the folder and its sub-folders. Each one becomes an archetype named after the file.
+* Fills in the box and sphere sizes from the model itself, and sets the asset type (drawable or fragment).
+* Links the texture dictionary if there's a matching `.ytd` beside the model (or textures inside the model), and the collision
+  if there's a matching `.ybn` (or collision inside the model).
+* Picks a draw distance from the model's size: small props stop drawing sooner, big ones stay longer (60 to 300).
+* If you have a `.ytyp` open in your project it adds to that one and skips names already in it; otherwise it makes a new one.
+  It asks before doing anything, then tells you how many were added, skipped, or couldn't be read.
+* Save the `.ytyp` afterwards. The model files still need to be streamed with it under the same names.
+
 ### Precise model selection (written for this fork)
 Right-click selection used to pick whatever model's *invisible box* was in front, which is why clicking around a tree or a
 fence was a guessing game. It now tests the model's real triangles, so you select the thing your cursor is actually on. If

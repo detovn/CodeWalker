@@ -3525,13 +3525,13 @@ namespace CodeWalker.Project
 
 
 
-        public void NewYtyp()
+        public YtypFile NewYtyp()
         {
             if (CurrentProjectFile == null)
             {
                 NewProject();
             }
-            if (CurrentProjectFile == null) return;
+            if (CurrentProjectFile == null) return null;
 
             int testi = 1;
             string fname = string.Empty;
@@ -3543,9 +3543,10 @@ namespace CodeWalker.Project
                 testi++;
             }
 
+            YtypFile ytyp;
             lock (projectsyncroot)
             {
-                YtypFile ytyp = CurrentProjectFile.AddYtypFile(fname);
+                ytyp = CurrentProjectFile.AddYtypFile(fname);
                 if (ytyp != null)
                 {
                     //ytyp.Loaded = true;
@@ -3556,6 +3557,8 @@ namespace CodeWalker.Project
             CurrentProjectFile.HasChanged = true;
 
             LoadProjectTree();
+
+            return ytyp;
         }
         public void SaveYtyp(bool saveas = false)
         {
@@ -3724,6 +3727,170 @@ namespace CodeWalker.Project
             ProjectExplorer?.TrySelectArchetypeTreeNode(archetype);
             CurrentArchetype = archetype;
 
+        }
+        public void AutoSetupYtyp()
+        {
+            //scan a folder of models and build archetypes for all of them in one go
+            if (!GameFileCache.IsInited)
+            {
+                MessageBox.Show("Please wait for the game files to finish loading first.");
+                return;
+            }
+
+            FolderBrowserDialog.Description = "Choose the folder containing your .ydr / .yft models (sub-folders are included)";
+            if (FolderBrowserDialog.ShowDialogNew() != DialogResult.OK) return;
+            var folder = FolderBrowserDialog.SelectedPath;
+
+            string[] files;
+            try
+            {
+                files = Directory.GetFiles(folder, "*.*", SearchOption.AllDirectories);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Unable to read the folder:\n" + ex.Message);
+                return;
+            }
+            Array.Sort(files, StringComparer.OrdinalIgnoreCase);
+
+            var models = new List<string>();
+            var sidecars = new HashSet<string>(StringComparer.OrdinalIgnoreCase); //ytd/ybn names that sit beside the models
+            foreach (var file in files)
+            {
+                var ext = Path.GetExtension(file).ToLowerInvariant();
+                var shortname = Path.GetFileNameWithoutExtension(file);
+                switch (ext)
+                {
+                    case ".ydr":
+                    case ".yft":
+                        models.Add(file);
+                        break;
+                    case ".ytd":
+                    case ".ybn":
+                        sidecars.Add(shortname + ext);
+                        break;
+                }
+            }
+            if (models.Count == 0)
+            {
+                MessageBox.Show("No .ydr or .yft files were found in that folder.");
+                return;
+            }
+
+            var ytyp = CurrentYtypFile;
+            if ((ytyp == null) || !YtypExistsInProject(ytyp))
+            {
+                if (MessageBox.Show("Found " + models.Count + " model(s).\nCreate a new .ytyp in your project and add them all?", "Auto setup ytyp", MessageBoxButtons.YesNo) != DialogResult.Yes) return;
+                ytyp = NewYtyp();
+                if (ytyp == null) return;
+                CurrentYtypFile = ytyp;
+            }
+            else
+            {
+                if (MessageBox.Show("Found " + models.Count + " model(s).\nAdd them all as archetypes to " + ytyp.Name + "?", "Auto setup ytyp", MessageBoxButtons.YesNo) != DialogResult.Yes) return;
+            }
+
+            var existing = new HashSet<uint>();
+            if (ytyp.AllArchetypes != null)
+            {
+                foreach (var a in ytyp.AllArchetypes) existing.Add(a._BaseArchetypeDef.name.Hash);
+            }
+
+            int added = 0;
+            int skipped = 0;
+            var failed = new List<string>();
+            Archetype last = null;
+
+            var oldcursor = Cursor;
+            Cursor = Cursors.WaitCursor;
+            try
+            {
+                foreach (var file in models)
+                {
+                    var name = Path.GetFileNameWithoutExtension(file);
+                    var hash = JenkHash.GenHash(name);
+                    if (existing.Contains(hash)) { skipped++; continue; }
+
+                    try
+                    {
+                        var data = File.ReadAllBytes(file);
+                        bool isfrag = string.Equals(Path.GetExtension(file), ".yft", StringComparison.OrdinalIgnoreCase);
+                        DrawableBase drawable;
+                        bool embeddedtex;
+                        bool embeddedbound = false;
+                        if (isfrag)
+                        {
+                            var yft = new YftFile();
+                            RpfFile.LoadResourceFile(yft, data, 162);
+                            drawable = yft.Fragment?.Drawable;
+                            embeddedtex = drawable?.ShaderGroup?.TextureDictionary != null;
+                        }
+                        else
+                        {
+                            var ydr = new YdrFile();
+                            RpfFile.LoadResourceFile(ydr, data, 165);
+                            drawable = ydr.Drawable;
+                            embeddedtex = drawable?.ShaderGroup?.TextureDictionary != null;
+                            embeddedbound = ydr.Drawable?.Bound != null;
+                        }
+                        if (drawable == null) { failed.Add(name + " (couldn't read model)"); continue; }
+
+                        JenkIndex.Ensure(name);
+
+                        float radius = drawable.BoundingSphereRadius;
+                        float lod = Math.Min(Math.Max(60.0f, radius * 20.0f), 300.0f); //small props pop out sooner, big ones stay longer
+
+                        var archetype = ytyp.AddArchetype();
+                        var def = archetype._BaseArchetypeDef;
+                        def.name = hash;
+                        def.assetName = hash;
+                        def.assetType = isfrag ? rage__fwArchetypeDef__eAssetType.ASSET_TYPE_FRAGMENT : rage__fwArchetypeDef__eAssetType.ASSET_TYPE_DRAWABLE;
+                        def.specialAttribute = 0;
+                        def.flags = 32;
+                        def.bbMin = drawable.BoundingBoxMin;
+                        def.bbMax = drawable.BoundingBoxMax;
+                        def.bsCentre = drawable.BoundingCenter;
+                        def.bsRadius = radius;
+                        def.lodDist = lod;
+                        def.hdTextureDist = Math.Min(lod, 60.0f);
+                        if (embeddedtex || sidecars.Contains(name + ".ytd")) def.textureDictionary = hash;
+                        if (embeddedbound || sidecars.Contains(name + ".ybn")) def.physicsDictionary = hash;
+                        archetype._BaseArchetypeDef = def;
+
+                        existing.Add(hash);
+                        AddProjectArchetype(archetype);
+                        ProjectExplorer?.AddArchetypeTreeNode(archetype);
+                        last = archetype;
+                        added++;
+                    }
+                    catch (Exception ex)
+                    {
+                        failed.Add(name + " (" + ex.Message + ")");
+                    }
+                }
+            }
+            finally
+            {
+                Cursor = oldcursor;
+            }
+
+            if (added > 0)
+            {
+                SetYtypHasChanged(true);
+                SetProjectHasChanged(true);
+                ProjectExplorer?.TrySelectArchetypeTreeNode(last);
+                CurrentArchetype = last;
+            }
+
+            var msg = "Added " + added + " archetype(s) to " + ytyp.Name + ".";
+            if (skipped > 0) msg += "\n" + skipped + " already existed and were skipped.";
+            if (failed.Count > 0)
+            {
+                msg += "\n\n" + failed.Count + " file(s) could not be added:\n" + string.Join("\n", failed.GetRange(0, Math.Min(failed.Count, 10)));
+                if (failed.Count > 10) msg += "\n...";
+            }
+            if (added > 0) msg += "\n\nRemember to save the .ytyp. The model files also need to be streamed with it (same names).";
+            MessageBox.Show(msg, "Auto setup ytyp");
         }
         public YmapEntityDef NewMloEntity(YmapEntityDef copy = null, bool copyTransform = false, bool selectNew = true)
         {
@@ -9822,6 +9989,10 @@ namespace CodeWalker.Project
         private void YtypNewArchetypeMenu_Click(object sender, EventArgs e)
         {
             NewArchetype();
+        }
+        private void AutoSetupYtypMenu_Click(object sender, EventArgs e)
+        {
+            AutoSetupYtyp();
         }
         private void YtypNewArchetypeFromYdrMenu_Click(object sender, EventArgs e)
         {

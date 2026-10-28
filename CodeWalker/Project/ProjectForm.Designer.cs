@@ -78,6 +78,8 @@
             this.toolStripSeparator31 = new System.Windows.Forms.ToolStripSeparator();
             this.deleteGrassToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.paintPropsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.autoSetupYtypToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.YtypAutoSetupMenu = new System.Windows.Forms.ToolStripMenuItem();
             this.YmapMenu = new System.Windows.Forms.ToolStripMenuItem();
             this.YmapNameMenu = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator11 = new System.Windows.Forms.ToolStripSeparator();
@@ -562,6 +564,7 @@
             this.ToolsImportMenyooXmlMenu,
             this.toolStripSeparator31,
             this.paintPropsToolStripMenuItem,
+            this.autoSetupYtypToolStripMenuItem,
             this.deleteGrassToolStripMenuItem});
             this.ToolsMenu.Name = "ToolsMenu";
             this.ToolsMenu.Size = new System.Drawing.Size(46, 20);
@@ -618,7 +621,21 @@
             this.paintPropsToolStripMenuItem.Size = new System.Drawing.Size(196, 22);
             this.paintPropsToolStripMenuItem.Text = "Paint Props / Grass...";
             this.paintPropsToolStripMenuItem.Click += new System.EventHandler(this.ToolsPaintPropsMenu_Click);
-            // 
+            //
+            // autoSetupYtypToolStripMenuItem
+            //
+            this.autoSetupYtypToolStripMenuItem.Name = "autoSetupYtypToolStripMenuItem";
+            this.autoSetupYtypToolStripMenuItem.Size = new System.Drawing.Size(196, 22);
+            this.autoSetupYtypToolStripMenuItem.Text = "Auto Setup Ytyp from Folder...";
+            this.autoSetupYtypToolStripMenuItem.Click += new System.EventHandler(this.AutoSetupYtypMenu_Click);
+            //
+            // YtypAutoSetupMenu
+            //
+            this.YtypAutoSetupMenu.Name = "YtypAutoSetupMenu";
+            this.YtypAutoSetupMenu.Size = new System.Drawing.Size(218, 22);
+            this.YtypAutoSetupMenu.Text = "Auto Setup from Folder...";
+            this.YtypAutoSetupMenu.Click += new System.EventHandler(this.AutoSetupYtypMenu_Click);
+            //
             // YmapMenu
             // 
             this.YmapMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
@@ -707,6 +724,7 @@
             this.toolStripSeparator13,
             this.YtypNewArchetypeMenu,
             this.YtypNewArchetypeFromYdrMenu,
+            this.YtypAutoSetupMenu,
             this.YtypMloToolStripMenuItem,
             this.toolStripSeparator15,
             this.YtypAddToProjectMenu,
@@ -1937,6 +1955,8 @@
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator31;
         private System.Windows.Forms.ToolStripMenuItem deleteGrassToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem paintPropsToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem autoSetupYtypToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem YtypAutoSetupMenu;
         private System.Windows.Forms.ToolStripMenuItem AudioNewStaticEmitterMenu;
     }
 }
