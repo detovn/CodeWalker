@@ -2337,8 +2337,6 @@ namespace CodeWalker
         }
 
 
-
-
         private void ViewSelected()
         {
             for (int i = 0; i < MainListView.SelectedIndices.Count; i++)
@@ -2365,6 +2363,28 @@ namespace CodeWalker
                 }
             }
         }
+
+        private string GetUniquePath(string folder, string name)
+        {
+            try
+            {
+                var baseName = Path.GetFileNameWithoutExtension(name);
+                var ext = Path.GetExtension(name);
+                var candidate = Path.Combine(folder, name);
+                int i = 1;
+                while (File.Exists(candidate))
+                {
+                    candidate = Path.Combine(folder, string.Format("{0}({1}){2}", baseName, i, ext));
+                    i++;
+                }
+                return candidate;
+            }
+            catch
+            {
+                return Path.Combine(folder, name);
+            }
+        }
+
         private void ExportXml()
         {
             var needfolder = false;//need a folder to output ytd XML to, for the texture .dds files
@@ -2427,7 +2447,7 @@ namespace CodeWalker
                         var xml = GetFileXml(file, out var newfn, folderpath, errorAction);
                         if (string.IsNullOrEmpty(xml)) continue;
 
-                        var path = folderpath + newfn;
+                        var path = GetUniquePath(folderpath, newfn);
                         try
                         {
                             File.WriteAllText(path, xml);
@@ -2492,7 +2512,7 @@ namespace CodeWalker
                     var file = CurrentFiles[idx];
                     if ((file.Folder == null) || (file.Folder.RpfFile != null))
                     {
-                        var path = folderpath + file.Name;
+                        var path = GetUniquePath(folderpath, file.Name);
                         try
                         {
                             var data = GetFileDataCompressResources(file);
@@ -2563,7 +2583,7 @@ namespace CodeWalker
                     var file = CurrentFiles[idx];
                     if (file.Folder == null)
                     {
-                        var path = folderpath + file.Name;
+                        var path = GetUniquePath(folderpath, file.Name);
                         var data = GetFileData(file);
                         if (data == null)
                         {
@@ -2601,7 +2621,7 @@ namespace CodeWalker
             {
                 if ((file.Folder == null) || (file.Folder.RpfFile != null))
                 {
-                    var path = folderpath + file.Name;
+                    var path = GetUniquePath(folderpath, file.Name);
                     try
                     {
                         var data = GetFileDataCompressResources(file);
@@ -3973,7 +3993,7 @@ namespace CodeWalker
                 try
                 {
                     var data = GetFileDataCompressResources(file);
-                    var filename = Path.Combine(outdir, file.Name);
+                    var filename = GetUniquePath(outdir, file.Name);
                     File.WriteAllBytes(filename, data);
                     if (addfilename)
                     {
