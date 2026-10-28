@@ -108,6 +108,7 @@ namespace CodeWalker
             this.SelectionExtensionTabPage = new System.Windows.Forms.TabPage();
             this.SelExtensionPropertyGrid = new CodeWalker.WinForms.ReadOnlyPropertyGrid();
             this.MouseSelectCheckBox = new System.Windows.Forms.CheckBox();
+            this.PreciseSelectCheckBox = new System.Windows.Forms.CheckBox();
             this.OptionsTabPage = new System.Windows.Forms.TabPage();
             this.OptionsTabControl = new System.Windows.Forms.TabControl();
             this.OptionsGeneralTabPage = new System.Windows.Forms.TabPage();
@@ -1093,6 +1094,7 @@ namespace CodeWalker
             this.SelectionTabPage.Controls.Add(this.SelectionNameTextBox);
             this.SelectionTabPage.Controls.Add(this.SelectionTabControl);
             this.SelectionTabPage.Controls.Add(this.MouseSelectCheckBox);
+            this.SelectionTabPage.Controls.Add(this.PreciseSelectCheckBox);
             this.SelectionTabPage.Location = new System.Drawing.Point(4, 22);
             this.SelectionTabPage.Name = "SelectionTabPage";
             this.SelectionTabPage.Size = new System.Drawing.Size(205, 606);
@@ -1348,6 +1350,19 @@ namespace CodeWalker
             this.MouseSelectCheckBox.Text = "Mouse select (right click)";
             this.MouseSelectCheckBox.UseVisualStyleBackColor = true;
             this.MouseSelectCheckBox.CheckedChanged += new System.EventHandler(this.MouseSelectCheckBox_CheckedChanged);
+            // 
+            // PreciseSelectCheckBox
+            // 
+            this.PreciseSelectCheckBox.AutoSize = true;
+            this.PreciseSelectCheckBox.Checked = true;
+            this.PreciseSelectCheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.PreciseSelectCheckBox.Location = new System.Drawing.Point(160, 7);
+            this.PreciseSelectCheckBox.Name = "PreciseSelectCheckBox";
+            this.PreciseSelectCheckBox.Size = new System.Drawing.Size(120, 17);
+            this.PreciseSelectCheckBox.TabIndex = 23;
+            this.PreciseSelectCheckBox.Text = "Precise (polygons)";
+            this.PreciseSelectCheckBox.UseVisualStyleBackColor = true;
+            this.PreciseSelectCheckBox.CheckedChanged += new System.EventHandler(this.PreciseSelectCheckBox_CheckedChanged);
             // 
             // OptionsTabPage
             // 
@@ -2878,7 +2893,7 @@ namespace CodeWalker
             this.ToolsMenuPaintProps.Enabled = false;
             this.ToolsMenuPaintProps.Name = "ToolsMenuPaintProps";
             this.ToolsMenuPaintProps.Size = new System.Drawing.Size(170, 22);
-            this.ToolsMenuPaintProps.Text = "Paint props...";
+            this.ToolsMenuPaintProps.Text = "Paint props / grass...";
             this.ToolsMenuPaintProps.Click += new System.EventHandler(this.ToolsMenuPaintProps_Click);
             // 
             // ToolsMenuCutsceneViewer
@@ -3839,6 +3854,7 @@ namespace CodeWalker
         private System.Windows.Forms.CheckBox SkydomeCheckBox;
         private System.Windows.Forms.CheckBox BoundsDepthClipCheckBox;
         private System.Windows.Forms.CheckBox MouseSelectCheckBox;
+        private System.Windows.Forms.CheckBox PreciseSelectCheckBox;
         private System.Windows.Forms.Label label8;
         private System.Windows.Forms.ComboBox BoundsStyleComboBox;
         private System.Windows.Forms.Label label9;

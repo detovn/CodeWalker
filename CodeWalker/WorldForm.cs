@@ -155,7 +155,8 @@ namespace CodeWalker
 
         bool MouseSelectEnabled = false;
         bool ShowSelectionBounds = true;
-        bool SelectByGeometry = false; //select by geometry needs more work 
+        bool SelectByGeometry = false; //select by geometry needs more work
+        bool SelectByPolygons = true; //precise mouse select - test the model's triangles instead of just its bounding box
         MapSelection CurMouseHit = new MapSelection();
         MapSelection LastMouseHit = new MapSelection();
         MapSelection PrevMouseHit = new MapSelection();
@@ -2556,6 +2557,84 @@ namespace CodeWalker
 
             }
         }
+        private enum PolygonTestResult
+        {
+            Unknown, //couldn't test the polygons, fall back to bounding boxes
+            Hit,
+            Miss
+        }
+
+        private PolygonTestResult TestDrawablePolygons(DrawableBase drawable, ref Ray ray, ref Vector3 scale, out float dist)
+        {
+            //tests a ray (in the entity's local space, before scaling) against all triangles of a drawable's high detail models.
+            dist = float.MaxValue;
+
+            var models = drawable?.DrawableModels?.High;
+            if ((models == null) || (models.Length == 0)) return PolygonTestResult.Unknown;
+
+            bool tested = false;
+            bool untestable = false;
+            bool hit = false;
+            int budget = 400000; //triangles - keeps very heavy models from slowing down mouse picking
+
+            for (int mi = 0; mi < models.Length; mi++)
+            {
+                var model = models[mi];
+                if (model?.Geometries == null) continue;
+                if ((model.HasSkin != 0) || (model.BoneIndex != 0))
+                {
+                    untestable = true; //these are positioned by bone transforms that aren't applied here
+                    continue;
+                }
+
+                for (int gi = 0; gi < model.Geometries.Length; gi++)
+                {
+                    var geom = model.Geometries[gi];
+                    var vb = geom?.VertexData;
+                    var ib = geom?.IndexBuffer;
+                    var vbytes = vb?.VertexBytes;
+                    var indices = ib?.Indices;
+                    if ((vbytes == null) || (indices == null) || (vb.VertexStride < 12) || (vb.Info == null) ||
+                        (vb.Info.GetComponentType(0) != VertexComponentType.Float3))
+                    {
+                        untestable = true;
+                        continue;
+                    }
+
+                    int tricount = indices.Length / 3;
+                    budget -= tricount;
+                    if (budget < 0) return PolygonTestResult.Unknown;
+
+                    int stride = vb.VertexStride;
+                    int vcount = vbytes.Length / stride;
+                    tested = true;
+
+                    for (int t = 0; t < tricount; t++)
+                    {
+                        int i0 = indices[t * 3];
+                        int i1 = indices[t * 3 + 1];
+                        int i2 = indices[t * 3 + 2];
+                        if ((i0 >= vcount) || (i1 >= vcount) || (i2 >= vcount)) continue;
+
+                        Vector3 v0 = new Vector3(BitConverter.ToSingle(vbytes, i0 * stride), BitConverter.ToSingle(vbytes, i0 * stride + 4), BitConverter.ToSingle(vbytes, i0 * stride + 8)) * scale;
+                        Vector3 v1 = new Vector3(BitConverter.ToSingle(vbytes, i1 * stride), BitConverter.ToSingle(vbytes, i1 * stride + 4), BitConverter.ToSingle(vbytes, i1 * stride + 8)) * scale;
+                        Vector3 v2 = new Vector3(BitConverter.ToSingle(vbytes, i2 * stride), BitConverter.ToSingle(vbytes, i2 * stride + 4), BitConverter.ToSingle(vbytes, i2 * stride + 8)) * scale;
+
+                        float d;
+                        if (ray.Intersects(ref v0, ref v1, ref v2, out d) && (d > 0) && (d < dist))
+                        {
+                            dist = d;
+                            hit = true;
+                        }
+                    }
+                }
+            }
+
+            if (hit) return PolygonTestResult.Hit;
+            if (untestable || !tested) return PolygonTestResult.Unknown;
+            return PolygonTestResult.Miss;
+        }
+
         private void UpdateMouseHits(DrawableBase drawable, Archetype arche, YmapEntityDef entity)
         {
             //if ((SelectionMode == MapSelectionMode.Entity) && !MouseSelectEnabled) return; //performance improvement when not selecting entities...
@@ -2764,19 +2843,40 @@ namespace CodeWalker
                     bool firsthit = (CurMouseHit.EntityDef == null);
                     if (firsthit || (hitdist > 0.0f)) //ignore when inside the box..
                     {
-                        bool nearer = (hitdist < CurMouseHit.HitDist);  //closer than the last..
-                        bool radsm = true;
-                        if ((CurMouseHit.Archetype != null) && (arche != null)) //compare hit archetype sizes...
+                        bool polyhit = false;
+                        if (SelectByPolygons)
                         {
-                            //var b1 = (arche.BBMax - arche.BBMin) * scale;
-                            //var b2 = (mousehit.Archetype.BBMax - mousehit.Archetype.BBMin) * scale;
-                            float r1 = arche.BSRadius;
-                            float r2 = CurMouseHit.Archetype.BSRadius;
-                            radsm = (r1 <= (r2));// * 0.5f)); //prefer selecting smaller things
+                            //precise version - test the ray against the model's actual triangles
+                            float polydist;
+                            var polyres = TestDrawablePolygons(drawable, ref mraytrn, ref scale, out polydist);
+                            if (polyres == PolygonTestResult.Miss)
+                            {
+                                return; //the box was hit but no triangles were, so it's not this model
+                            }
+                            if (polyres == PolygonTestResult.Hit)
+                            {
+                                if (polydist >= CurMouseHit.HitDist) return; //something nearer was already hit
+                                hitdist = polydist;
+                                polyhit = true;
+                                outerhit = true;
+                            }
                         }
-                        if ((nearer&&radsm) || radsm)
+                        if (!polyhit)
                         {
-                            outerhit = true;
+                            bool nearer = (hitdist < CurMouseHit.HitDist);  //closer than the last..
+                            bool radsm = true;
+                            if ((CurMouseHit.Archetype != null) && (arche != null)) //compare hit archetype sizes...
+                            {
+                                //var b1 = (arche.BBMax - arche.BBMin) * scale;
+                                //var b2 = (mousehit.Archetype.BBMax - mousehit.Archetype.BBMin) * scale;
+                                float r1 = arche.BSRadius;
+                                float r2 = CurMouseHit.Archetype.BSRadius;
+                                radsm = (r1 <= (r2));// * 0.5f)); //prefer selecting smaller things
+                            }
+                            if ((nearer&&radsm) || radsm)
+                            {
+                                outerhit = true;
+                            }
                         }
                     }
                 }
@@ -2963,6 +3063,11 @@ namespace CodeWalker
             }
             if ((SelectionMode == MapSelectionMode.Grass) && (ymap.GrassInstanceBatches != null))
             {
+                //prefer the batch that owns the blade of grass under the cursor, falling back to the batch's bounding box.
+                YmapGrassInstanceBatch bladeBatch = null;
+                float bladeDist = float.MaxValue;
+                YmapGrassInstanceBatch boxBatch = null;
+                float boxDist = float.MaxValue;
                 for (int i = 0; i < ymap.GrassInstanceBatches.Length; i++)
                 {
                     var gb = ymap.GrassInstanceBatches[i];
@@ -2978,13 +3083,29 @@ namespace CodeWalker
 
                     bbox.Minimum = mb.BBMin;
                     bbox.Maximum = mb.BBMax;
-                    if (mray.Intersects(ref bbox, out hitdist) && (hitdist < CurMouseHit.HitDist) && (hitdist > 0))
+                    if (mray.Intersects(ref bbox, out hitdist) && (hitdist > 0))
                     {
-                        CurMouseHit.GrassBatch = gb;
-                        CurMouseHit.HitDist = hitdist;
-                        CurMouseHit.CamRel = mb.CamRelPos;
-                        CurMouseHit.AABB = bbox;
+                        float bd;
+                        if (gb.RayIntersectInstances(ref mray, 0.35f, out bd) && (bd < bladeDist))
+                        {
+                            bladeBatch = gb;
+                            bladeDist = bd;
+                        }
+                        if (hitdist < boxDist)
+                        {
+                            boxBatch = gb;
+                            boxDist = hitdist;
+                        }
                     }
+                }
+                var selBatch = (bladeBatch != null) ? bladeBatch : boxBatch;
+                float selDist = (bladeBatch != null) ? bladeDist : boxDist;
+                if ((selBatch != null) && (selDist < CurMouseHit.HitDist))
+                {
+                    CurMouseHit.GrassBatch = selBatch;
+                    CurMouseHit.HitDist = selDist;
+                    CurMouseHit.CamRel = -camera.Position;
+                    CurMouseHit.AABB = new BoundingBox(selBatch.AABBMin, selBatch.AABBMax);
                 }
             }
             if ((SelectionMode == MapSelectionMode.LodLights) && (ymap.LODLights != null))
@@ -6590,7 +6711,12 @@ namespace CodeWalker
         {
             if (e.Delta != 0)
             {
-                if (ControlMode == WorldControlMode.Free || ControlBrushEnabled)
+                if (ControlBrushEnabled && (ProjectForm != null) && ProjectForm.IsPaintingProps())
+                {
+                    //CTRL + wheel resizes the paint brush instead of zooming the camera
+                    ProjectForm.PaintAdjustBrushRadius((e.Delta > 0) ? 1.15f : (1.0f / 1.15f));
+                }
+                else if (ControlMode == WorldControlMode.Free || ControlBrushEnabled)
                 {
                     camera.MouseZoom(e.Delta);
                 }
@@ -6681,6 +6807,20 @@ namespace CodeWalker
                     if (k == Keys.Delete)
                     {
                         DeleteItem();
+                    }
+                    if (ProjectForm != null)
+                    {
+                        //paint tool keys - B toggles painting (opening the panel if needed), the rest need the panel to be open.
+                        if (k == Keys.B)
+                        {
+                            ProjectForm.PaintTogglePainting();
+                        }
+                        else if (ProjectForm.PaintPropsPanel != null)
+                        {
+                            if (k == Keys.G) ProjectForm.PaintToggleMode();
+                            if (k == Keys.OemOpenBrackets) ProjectForm.PaintAdjustBrushRadius(1.0f / 1.2f);
+                            if (k == Keys.OemCloseBrackets) ProjectForm.PaintAdjustBrushRadius(1.2f);
+                        }
                     }
                     if (SelectionMode == MapSelectionMode.Path)
                     {
@@ -7082,6 +7222,11 @@ namespace CodeWalker
         private void MouseSelectCheckBox_CheckedChanged(object sender, EventArgs e)
         {
             SetMouseSelect(MouseSelectCheckBox.Checked);
+        }
+
+        private void PreciseSelectCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            SelectByPolygons = PreciseSelectCheckBox.Checked;
         }
 
         private void SelectionBoundsCheckBox_CheckedChanged(object sender, EventArgs e)

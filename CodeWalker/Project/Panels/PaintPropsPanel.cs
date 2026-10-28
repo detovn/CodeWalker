@@ -1,8 +1,10 @@
-using CodeWalker.GameFiles;
+﻿using CodeWalker.GameFiles;
+using CodeWalker.Utils;
 using CodeWalker.World;
 using SharpDX;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Windows.Forms;
 using WeifenLuo.WinFormsUI.Docking;
 
@@ -28,6 +30,7 @@ namespace CodeWalker.Project.Panels
 
             this.DockStateChanged += onDockStateChanged;
 
+            UpdateModeControls();
             UpdateTargetLabel();
         }
 
@@ -45,9 +48,43 @@ namespace CodeWalker.Project.Panels
             UpdateTargetLabel();
         }
 
-        internal bool PaintEnabled => PaintEnabledCheckBox.Checked && (PropsListBox.Items.Count > 0);
+        internal bool IsGrassMode => ModeGrassRadio.Checked;
+        internal bool PaintEnabled
+        {
+            get
+            {
+                if (!PaintEnabledCheckBox.Checked) return false;
+                return IsGrassMode || (PropsListBox.Items.Count > 0);
+            }
+        }
         internal float BrushRadius => (float)RadiusNumericUpDown.Value;
 
+
+        //######## Keybind actions (called by the world view)
+
+        public void TogglePaintEnabled()
+        {
+            if (!PaintEnabledCheckBox.Enabled) return;
+            PaintEnabledCheckBox.Checked = !PaintEnabledCheckBox.Checked;
+            SetStatus(PaintEnabledCheckBox.Checked ? "Painting enabled - hold CTRL and drag in the world view." : "Painting disabled.");
+        }
+        public void ToggleMode()
+        {
+            if (IsGrassMode) ModePropsRadio.Checked = true;
+            else ModeGrassRadio.Checked = true;
+            SetStatus(IsGrassMode ? "Grass mode" : "Prop mode");
+        }
+        public void AdjustBrushRadius(float factor)
+        {
+            decimal v = RadiusNumericUpDown.Value;
+            v = Math.Round(v * (decimal)factor, 1);
+            if (factor > 1.0f && v == RadiusNumericUpDown.Value) v += RadiusNumericUpDown.Increment;
+            if (factor < 1.0f && v == RadiusNumericUpDown.Value) v -= RadiusNumericUpDown.Increment;
+            RadiusNumericUpDown.Value = Math.Max(RadiusNumericUpDown.Minimum, Math.Min(RadiusNumericUpDown.Maximum, v));
+        }
+
+
+        //######## Painting
 
         public void PaintAtMouse(SpaceRayIntersectResult mouseRay, bool erase)
         {
@@ -65,38 +102,46 @@ namespace CodeWalker.Project.Panels
 
             if (erase)
             {
-                var hashes = new HashSet<uint>();
-                foreach (var item in PropsListBox.Items)
-                {
-                    hashes.Add(JenkHash.GenHash(item.ToString().ToLowerInvariant()));
-                }
-                int removed = ProjectForm.ErasePaintedEntities(ymap, mouseRay.Position, BrushRadius, hashes);
-                if (removed > 0)
-                {
-                    SetStatus("Erased " + removed.ToString() + " prop(s) from " + ymap.Name);
-                }
+                Erase(ymap, mouseRay.Position);
                 return;
             }
 
-            var archetypes = GetPaletteArchetypes();
-            if (archetypes.Count == 0)
+            if (IsGrassMode) PaintGrass(wf, ymap, mouseRay);
+            else PaintProps(wf, ymap, mouseRay);
+        }
+
+        private void Erase(YmapFile ymap, Vector3 pos)
+        {
+            if (IsGrassMode)
             {
-                SetStatus("None of the props in the list were found in the game files.");
+                int removed = ProjectForm.EraseGrassInstances(ymap, pos, BrushRadius);
+                if (removed > 0) SetStatus("Erased " + removed.ToString() + " grass blade(s) from " + ymap.Name);
                 return;
             }
 
+            var hashes = new HashSet<uint>();
+            foreach (var item in PropsListBox.Items)
+            {
+                hashes.Add(JenkHash.GenHash(item.ToString().ToLowerInvariant()));
+            }
+            int n = ProjectForm.ErasePaintedEntities(ymap, pos, BrushRadius, hashes);
+            if (n > 0) SetStatus("Erased " + n.ToString() + " prop(s) from " + ymap.Name);
+        }
+
+        private class Placement
+        {
+            public Vector3 Position;
+            public Vector3 Normal;
+        }
+
+        private List<Placement> FindPlacements(WorldForm wf, YmapFile ymap, SpaceRayIntersectResult mouseRay, float spacing, Func<Vector3, bool> blocked)
+        {
             float radius = BrushRadius;
             int count = (int)CountNumericUpDown.Value;
-            float spacing = (float)SpacingNumericUpDown.Value;
             float minSlopeCos = (float)Math.Cos(MathUtil.DegreesToRadians((float)MaxSlopeNumericUpDown.Value));
-            float scaleMin = (float)ScaleMinNumericUpDown.Value;
-            float scaleMax = Math.Max(scaleMin, (float)ScaleMaxNumericUpDown.Value);
             float zOffset = (float)ZOffsetNumericUpDown.Value;
-            bool randomYaw = RandomYawCheckBox.Checked;
-            bool alignToSurface = AlignToSurfaceCheckBox.Checked;
 
-            var placed = new List<Vector3>();
-            var normals = new List<Vector3>();
+            var res = new List<Placement>();
 
             //Space.RayIntersect reuses the shared MapDataStore/BoundsStore VisibleItems lists, which the
             //render thread also iterates each frame, so the raycasts must happen inside the render lock.
@@ -117,31 +162,94 @@ namespace CodeWalker.Project.Panels
                     if (normal.Z < minSlopeCos) continue; //too steep
 
                     var pos = hit.Position + new Vector3(0, 0, zOffset);
-                    if (IsTooClose(pos, spacing, ymap, placed)) continue;
 
-                    placed.Add(pos);
-                    normals.Add(normal);
+                    bool tooclose = false;
+                    float sq = spacing * spacing;
+                    if (spacing > 0)
+                    {
+                        foreach (var o in res)
+                        {
+                            if (Vector3.DistanceSquared(o.Position, pos) < sq) { tooclose = true; break; }
+                        }
+                    }
+                    if (tooclose) continue;
+                    if ((blocked != null) && blocked(pos)) continue;
+
+                    res.Add(new Placement { Position = pos, Normal = normal });
                 }
             }
+            return res;
+        }
+
+        private void PaintProps(WorldForm wf, YmapFile ymap, SpaceRayIntersectResult mouseRay)
+        {
+            var archetypes = GetPaletteArchetypes();
+            if (archetypes.Count == 0)
+            {
+                SetStatus("None of the props in the list were found in the game files.");
+                return;
+            }
+
+            float spacing = (float)SpacingNumericUpDown.Value;
+            float scaleMin = (float)ScaleMinNumericUpDown.Value;
+            float scaleMax = Math.Max(scaleMin, (float)ScaleMaxNumericUpDown.Value);
+            bool randomYaw = RandomYawCheckBox.Checked;
+            bool alignToSurface = AlignToSurfaceCheckBox.Checked;
+
+            Func<Vector3, bool> blocked = (pos) => IsNearExistingEntity(ymap, pos, spacing);
+            var placements = FindPlacements(wf, ymap, mouseRay, spacing, blocked);
 
             int created = 0;
-            for (int i = 0; i < placed.Count; i++)
+            foreach (var pl in placements)
             {
                 var arch = archetypes[Rand.Next(archetypes.Count)];
                 float yaw = randomYaw ? (float)(Rand.NextDouble() * Math.PI * 2.0) : 0.0f;
-                var ori = GetOrientation(alignToSurface ? normals[i] : Vector3.UnitZ, yaw);
+                var ori = GetOrientation(alignToSurface ? pl.Normal : Vector3.UnitZ, yaw);
                 float scale = scaleMin + (float)Rand.NextDouble() * (scaleMax - scaleMin);
 
-                var ent = ProjectForm.PaintEntity(ymap, arch, placed[i], ori, scale);
-                if (ent != null)
-                {
-                    created++;
-                }
+                var ent = ProjectForm.PaintEntity(ymap, arch, pl.Position, ori, scale);
+                if (ent != null) created++;
             }
 
             if (created > 0)
             {
                 SetStatus("Painted " + created.ToString() + " prop(s) into " + ymap.Name + " (" + (ymap.AllEntities?.Length ?? 0).ToString() + " entities)");
+            }
+        }
+
+        private void PaintGrass(WorldForm wf, YmapFile ymap, SpaceRayIntersectResult mouseRay)
+        {
+            string typeName = GrassTypeTextBox.Text?.Trim();
+            if (string.IsNullOrEmpty(typeName))
+            {
+                SetStatus("Enter a grass type (e.g. proc_grasses01).");
+                return;
+            }
+            uint archHash = JenkHash.GenHash(typeName.ToLowerInvariant());
+
+            float spacing = (float)SpacingNumericUpDown.Value;
+            var placements = FindPlacements(wf, ymap, mouseRay, spacing, null);
+            if (placements.Count == 0) return;
+
+            int smin = (int)GrassScaleMinNumericUpDown.Value;
+            int smax = Math.Max(smin, (int)GrassScaleMaxNumericUpDown.Value);
+
+            var positions = new List<Vector3>();
+            var normals = new List<Vector3>();
+            var scales = new List<byte>();
+            foreach (var pl in placements)
+            {
+                positions.Add(pl.Position);
+                normals.Add(pl.Normal);
+                scales.Add((byte)Rand.Next(smin, smax + 1));
+            }
+
+            var c = GrassColorLabel.BackColor;
+            var col = new SharpDX.Color(c.R, c.G, c.B);
+            int added = ProjectForm.PaintGrassInstances(ymap, archHash, positions, normals, scales, col, (byte)GrassAoNumericUpDown.Value, BrushRadius);
+            if (added > 0)
+            {
+                SetStatus("Painted " + added.ToString() + " grass blade(s) into " + ymap.Name);
             }
         }
 
@@ -160,14 +268,10 @@ namespace CodeWalker.Project.Panels
             return list;
         }
 
-        private bool IsTooClose(Vector3 pos, float spacing, YmapFile ymap, List<Vector3> placed)
+        private bool IsNearExistingEntity(YmapFile ymap, Vector3 pos, float spacing)
         {
             if (spacing <= 0) return false;
             float sq = spacing * spacing;
-            foreach (var p in placed)
-            {
-                if (Vector3.DistanceSquared(p, pos) < sq) return true;
-            }
             if (ymap.AllEntities != null)
             {
                 foreach (var ent in ymap.AllEntities)
@@ -220,6 +324,18 @@ namespace CodeWalker.Project.Panels
             PropsListBox.Items.Add(name);
         }
 
+        private void UpdateModeControls()
+        {
+            bool grass = IsGrassMode;
+            PropsGroupBox.Visible = !grass;
+            GrassGroupBox.Visible = grass;
+            RandomYawCheckBox.Enabled = !grass;
+            AlignToSurfaceCheckBox.Enabled = !grass;
+            ScaleMinNumericUpDown.Enabled = !grass;
+            ScaleMaxNumericUpDown.Enabled = !grass;
+            ScaleLabel.Enabled = !grass;
+        }
+
         private void UpdateTargetLabel()
         {
             UpdateTargetLabel(ProjectForm?.GetPaintPropsTargetYmap());
@@ -231,6 +347,11 @@ namespace CodeWalker.Project.Panels
 
         private void SetStatus(string text)
         {
+            if (InvokeRequired)
+            {
+                try { BeginInvoke(new Action(() => { StatusLabel.Text = text; })); } catch { }
+                return;
+            }
             StatusLabel.Text = text;
         }
 
@@ -276,9 +397,23 @@ namespace CodeWalker.Project.Panels
         private void PaintEnabledCheckBox_CheckedChanged(object sender, EventArgs e)
         {
             UpdateTargetLabel();
-            if (PaintEnabledCheckBox.Checked && (PropsListBox.Items.Count == 0))
+            if (PaintEnabledCheckBox.Checked && !IsGrassMode && (PropsListBox.Items.Count == 0))
             {
                 SetStatus("Add at least one prop to the list to start painting.");
+            }
+        }
+
+        private void ModeRadio_CheckedChanged(object sender, EventArgs e)
+        {
+            UpdateModeControls();
+        }
+
+        private void GrassColorLabel_Click(object sender, EventArgs e)
+        {
+            var colDiag = new ColourPickerForm { SelectedColour = GrassColorLabel.BackColor };
+            if (colDiag.ShowDialog(this) == DialogResult.OK)
+            {
+                GrassColorLabel.BackColor = colDiag.SelectedColour;
             }
         }
 
@@ -295,6 +430,22 @@ namespace CodeWalker.Project.Panels
             if (ScaleMinNumericUpDown.Value > ScaleMaxNumericUpDown.Value)
             {
                 ScaleMinNumericUpDown.Value = ScaleMaxNumericUpDown.Value;
+            }
+        }
+
+        private void GrassScaleMinNumericUpDown_ValueChanged(object sender, EventArgs e)
+        {
+            if (GrassScaleMaxNumericUpDown.Value < GrassScaleMinNumericUpDown.Value)
+            {
+                GrassScaleMaxNumericUpDown.Value = GrassScaleMinNumericUpDown.Value;
+            }
+        }
+
+        private void GrassScaleMaxNumericUpDown_ValueChanged(object sender, EventArgs e)
+        {
+            if (GrassScaleMinNumericUpDown.Value > GrassScaleMaxNumericUpDown.Value)
+            {
+                GrassScaleMinNumericUpDown.Value = GrassScaleMaxNumericUpDown.Value;
             }
         }
     }

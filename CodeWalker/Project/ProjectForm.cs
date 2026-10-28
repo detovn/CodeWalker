@@ -2630,6 +2630,124 @@ namespace CodeWalker.Project
             return remove.Count;
         }
 
+        const float PaintGrassMaxBatchSize = 60.0f; //keeps batches small enough to cull and render efficiently
+
+        public int PaintGrassInstances(YmapFile ymap, uint archetypeHash, List<Vector3> positions, List<Vector3> normals, List<byte> scales, SharpDX.Color color, byte ao, float brushRadius)
+        {
+            if ((ymap == null) || (positions == null) || (positions.Count == 0)) return 0;
+
+            var center = Vector3.Zero;
+            foreach (var p in positions) center += p;
+            center /= positions.Count;
+
+            YmapGrassInstanceBatch batch = null;
+            object syncroot = (WorldForm != null) ? WorldForm.RenderSyncRoot : new object();
+            bool created = false;
+
+            lock (syncroot)
+            {
+                //reuse the nearest batch of this grass type that can take the new blades
+                if (ymap.GrassInstanceBatches != null)
+                {
+                    float best = float.MaxValue;
+                    foreach (var gb in ymap.GrassInstanceBatches)
+                    {
+                        if (gb.Batch.archetypeName.Hash != archetypeHash) continue;
+                        if (!gb.CanFitInstances(positions, PaintGrassMaxBatchSize)) continue;
+                        float d = Vector3.Distance(gb.Position, center);
+                        if (d < best) { best = d; batch = gb; }
+                    }
+                }
+
+                if (batch == null)
+                {
+                    var fw = new rage__fwGrassInstanceListDef();
+                    fw.archetypeName = new MetaHash(archetypeHash);
+                    fw.lodDist = 120;
+                    fw.LodFadeStartDist = 15;
+                    fw.LodInstFadeRange = 0.75f;
+                    fw.OrientToTerrain = 1.0f;
+                    fw.ScaleRange = new Vector3(0.3f, 0.2f, 0.7f);
+
+                    batch = new YmapGrassInstanceBatch
+                    {
+                        Archetype = GameFileCache.GetArchetype(archetypeHash),
+                        Batch = fw,
+                        Instances = new rage__fwGrassInstanceListDef__InstanceData[0],
+                        Ymap = ymap
+                    };
+                    ymap.AddGrassBatch(batch);
+                    created = true;
+                }
+
+                batch.AddInstances(positions, normals, scales, color, ao, Vector3.Zero);
+                WorldForm?.UpdateGrassBatchGraphics(batch);
+            }
+
+            if (created)
+            {
+                ProjectExplorer?.AddGrassBatchTreeNode(batch);
+            }
+            ProjectExplorer?.SetYmapHasChanged(ymap, true);
+            FindPanel<EditYmapGrassPanel>(panel => panel.CurrentBatch == batch)?.BatchChanged();
+
+            return positions.Count;
+        }
+
+        public int EraseGrassInstances(YmapFile ymap, Vector3 center, float radius)
+        {
+            if (ymap?.GrassInstanceBatches == null) return 0;
+
+            int total = 0;
+            var emptied = new List<YmapGrassInstanceBatch>();
+            object syncroot = (WorldForm != null) ? WorldForm.RenderSyncRoot : new object();
+            lock (syncroot)
+            {
+                foreach (var gb in ymap.GrassInstanceBatches)
+                {
+                    if (Vector3.Distance(gb.Position, center) > (gb.Radius + radius)) continue;
+                    int n = gb.EraseInstances(center, radius);
+                    if (n <= 0) continue;
+                    total += n;
+                    if (gb.InstanceCount == 0) emptied.Add(gb);
+                    else WorldForm?.UpdateGrassBatchGraphics(gb);
+                }
+                foreach (var gb in emptied)
+                {
+                    ymap.RemoveGrassBatch(gb);
+                }
+            }
+
+            foreach (var gb in emptied)
+            {
+                ProjectExplorer?.RemoveGrassBatchTreeNode(gb);
+                ClosePanel((EditYmapGrassPanel p) => { return p.Tag == gb; });
+                if (CurrentGrassBatch == gb) CurrentGrassBatch = null;
+            }
+            if (total > 0)
+            {
+                ProjectExplorer?.SetYmapHasChanged(ymap, true);
+                FindPanel<EditYmapGrassPanel>(panel => panel.CurrentBatch == CurrentGrassBatch)?.BatchChanged();
+            }
+            return total;
+        }
+
+        //######## Paint keybind actions, called by the world view
+
+        public void PaintTogglePainting()
+        {
+            if (PaintPropsPanel == null) ShowPaintPropsPanel(true);
+            PaintPropsPanel?.TogglePaintEnabled();
+        }
+        public void PaintToggleMode()
+        {
+            PaintPropsPanel?.ToggleMode();
+        }
+        public void PaintAdjustBrushRadius(float factor)
+        {
+            PaintPropsPanel?.AdjustBrushRadius(factor);
+        }
+
         public YmapCarGen NewCarGen(YmapCarGen copy = null, bool copyPosition = false, bool selectNew = true)
         {
             if (CurrentYmapFile == null) return null;

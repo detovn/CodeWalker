@@ -84,6 +84,7 @@
             this.YmapNewEntityMenu = new System.Windows.Forms.ToolStripMenuItem();
             this.YmapNewCarGenMenu = new System.Windows.Forms.ToolStripMenuItem();
             this.YmapNewGrassBatchMenu = new System.Windows.Forms.ToolStripMenuItem();
+            this.YmapPaintPropsMenu = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator12 = new System.Windows.Forms.ToolStripSeparator();
             this.YmapAddToProjectMenu = new System.Windows.Forms.ToolStripMenuItem();
             this.YmapRemoveFromProjectMenu = new System.Windows.Forms.ToolStripMenuItem();
@@ -560,8 +561,8 @@
             this.toolStripSeparator2,
             this.ToolsImportMenyooXmlMenu,
             this.toolStripSeparator31,
-            this.deleteGrassToolStripMenuItem,
-            this.paintPropsToolStripMenuItem});
+            this.paintPropsToolStripMenuItem,
+            this.deleteGrassToolStripMenuItem});
             this.ToolsMenu.Name = "ToolsMenu";
             this.ToolsMenu.Size = new System.Drawing.Size(46, 20);
             this.ToolsMenu.Text = "Tools";
@@ -615,7 +616,7 @@
             // 
             this.paintPropsToolStripMenuItem.Name = "paintPropsToolStripMenuItem";
             this.paintPropsToolStripMenuItem.Size = new System.Drawing.Size(196, 22);
-            this.paintPropsToolStripMenuItem.Text = "Paint Props...";
+            this.paintPropsToolStripMenuItem.Text = "Paint Props / Grass...";
             this.paintPropsToolStripMenuItem.Click += new System.EventHandler(this.ToolsPaintPropsMenu_Click);
             // 
             // YmapMenu
@@ -626,6 +627,7 @@
             this.YmapNewEntityMenu,
             this.YmapNewCarGenMenu,
             this.YmapNewGrassBatchMenu,
+            this.YmapPaintPropsMenu,
             this.toolStripSeparator12,
             this.YmapAddToProjectMenu,
             this.YmapRemoveFromProjectMenu});
@@ -669,6 +671,13 @@
             this.YmapNewGrassBatchMenu.Size = new System.Drawing.Size(199, 22);
             this.YmapNewGrassBatchMenu.Text = "New Grass Batch";
             this.YmapNewGrassBatchMenu.Click += new System.EventHandler(this.YmapNewGrassBatchMenu_Click);
+            // 
+            // YmapPaintPropsMenu
+            // 
+            this.YmapPaintPropsMenu.Name = "YmapPaintPropsMenu";
+            this.YmapPaintPropsMenu.Size = new System.Drawing.Size(199, 22);
+            this.YmapPaintPropsMenu.Text = "Paint Props / Grass...";
+            this.YmapPaintPropsMenu.Click += new System.EventHandler(this.ToolsPaintPropsMenu_Click);
             // 
             // toolStripSeparator12
             // 
@@ -1853,6 +1862,7 @@
         private System.Windows.Forms.ToolStripMenuItem ScenarioAddToProjectMenu;
         private System.Windows.Forms.ToolStripMenuItem ScenarioRemoveFromProjectMenu;
         private System.Windows.Forms.ToolStripMenuItem YmapNewGrassBatchMenu;
+        private System.Windows.Forms.ToolStripMenuItem YmapPaintPropsMenu;
         private System.Windows.Forms.ToolStripMenuItem YtypMloToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem YtypMloNewEntityToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem ToolsNavMeshGeneratorMenu;

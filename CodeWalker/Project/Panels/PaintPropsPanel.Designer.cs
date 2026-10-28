@@ -29,12 +29,25 @@ namespace CodeWalker.Project.Panels
         private void InitializeComponent()
         {
             this.PaintEnabledCheckBox = new System.Windows.Forms.CheckBox();
+            this.ModePropsRadio = new System.Windows.Forms.RadioButton();
+            this.ModeGrassRadio = new System.Windows.Forms.RadioButton();
             this.PropsGroupBox = new System.Windows.Forms.GroupBox();
             this.RemoveButton = new System.Windows.Forms.Button();
             this.PropsListBox = new System.Windows.Forms.ListBox();
             this.AddSelectedButton = new System.Windows.Forms.Button();
             this.AddButton = new System.Windows.Forms.Button();
             this.PropNameTextBox = new System.Windows.Forms.TextBox();
+            this.GrassGroupBox = new System.Windows.Forms.GroupBox();
+            this.GrassTypeLabel = new System.Windows.Forms.Label();
+            this.GrassTypeTextBox = new System.Windows.Forms.TextBox();
+            this.GrassColorTitleLabel = new System.Windows.Forms.Label();
+            this.GrassColorLabel = new System.Windows.Forms.Label();
+            this.GrassAoLabel = new System.Windows.Forms.Label();
+            this.GrassAoNumericUpDown = new System.Windows.Forms.NumericUpDown();
+            this.GrassScaleLabel = new System.Windows.Forms.Label();
+            this.GrassScaleMinNumericUpDown = new System.Windows.Forms.NumericUpDown();
+            this.GrassScaleMaxNumericUpDown = new System.Windows.Forms.NumericUpDown();
+            this.GrassInfoLabel = new System.Windows.Forms.Label();
             this.BrushGroupBox = new System.Windows.Forms.GroupBox();
             this.SpacingNumericUpDown = new System.Windows.Forms.NumericUpDown();
             this.SpacingLabel = new System.Windows.Forms.Label();
@@ -57,6 +70,10 @@ namespace CodeWalker.Project.Panels
             this.HelpLabel = new System.Windows.Forms.Label();
             this.StatusLabel = new System.Windows.Forms.Label();
             this.PropsGroupBox.SuspendLayout();
+            this.GrassGroupBox.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.GrassAoNumericUpDown)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.GrassScaleMinNumericUpDown)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.GrassScaleMaxNumericUpDown)).BeginInit();
             this.BrushGroupBox.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.SpacingNumericUpDown)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.CountNumericUpDown)).BeginInit();
@@ -73,11 +90,35 @@ namespace CodeWalker.Project.Panels
             this.PaintEnabledCheckBox.AutoSize = true;
             this.PaintEnabledCheckBox.Location = new System.Drawing.Point(12, 12);
             this.PaintEnabledCheckBox.Name = "PaintEnabledCheckBox";
-            this.PaintEnabledCheckBox.Size = new System.Drawing.Size(300, 17);
+            this.PaintEnabledCheckBox.Size = new System.Drawing.Size(320, 17);
             this.PaintEnabledCheckBox.TabIndex = 0;
-            this.PaintEnabledCheckBox.Text = "&Paint enabled (hold CTRL and left-drag in the world view)";
+            this.PaintEnabledCheckBox.Text = "&Paint enabled (B) - hold CTRL and left-drag in the world view";
             this.PaintEnabledCheckBox.UseVisualStyleBackColor = true;
             this.PaintEnabledCheckBox.CheckedChanged += new System.EventHandler(this.PaintEnabledCheckBox_CheckedChanged);
+            //
+            // ModePropsRadio
+            //
+            this.ModePropsRadio.AutoSize = true;
+            this.ModePropsRadio.Checked = true;
+            this.ModePropsRadio.Location = new System.Drawing.Point(12, 38);
+            this.ModePropsRadio.Name = "ModePropsRadio";
+            this.ModePropsRadio.Size = new System.Drawing.Size(80, 17);
+            this.ModePropsRadio.TabIndex = 1;
+            this.ModePropsRadio.TabStop = true;
+            this.ModePropsRadio.Text = "Paint props";
+            this.ModePropsRadio.UseVisualStyleBackColor = true;
+            this.ModePropsRadio.CheckedChanged += new System.EventHandler(this.ModeRadio_CheckedChanged);
+            //
+            // ModeGrassRadio
+            //
+            this.ModeGrassRadio.AutoSize = true;
+            this.ModeGrassRadio.Location = new System.Drawing.Point(120, 38);
+            this.ModeGrassRadio.Name = "ModeGrassRadio";
+            this.ModeGrassRadio.Size = new System.Drawing.Size(80, 17);
+            this.ModeGrassRadio.TabIndex = 2;
+            this.ModeGrassRadio.Text = "Paint grass (G swaps)";
+            this.ModeGrassRadio.UseVisualStyleBackColor = true;
+            this.ModeGrassRadio.CheckedChanged += new System.EventHandler(this.ModeRadio_CheckedChanged);
             //
             // PropsGroupBox
             //
@@ -86,10 +127,10 @@ namespace CodeWalker.Project.Panels
             this.PropsGroupBox.Controls.Add(this.AddSelectedButton);
             this.PropsGroupBox.Controls.Add(this.AddButton);
             this.PropsGroupBox.Controls.Add(this.PropNameTextBox);
-            this.PropsGroupBox.Location = new System.Drawing.Point(12, 38);
+            this.PropsGroupBox.Location = new System.Drawing.Point(12, 64);
             this.PropsGroupBox.Name = "PropsGroupBox";
             this.PropsGroupBox.Size = new System.Drawing.Size(406, 170);
-            this.PropsGroupBox.TabIndex = 1;
+            this.PropsGroupBox.TabIndex = 3;
             this.PropsGroupBox.TabStop = false;
             this.PropsGroupBox.Text = "Props (one is picked at random for each placement)";
             //
@@ -139,6 +180,141 @@ namespace CodeWalker.Project.Panels
             this.RemoveButton.UseVisualStyleBackColor = true;
             this.RemoveButton.Click += new System.EventHandler(this.RemoveButton_Click);
             //
+            // GrassGroupBox
+            //
+            this.GrassGroupBox.Controls.Add(this.GrassInfoLabel);
+            this.GrassGroupBox.Controls.Add(this.GrassScaleMaxNumericUpDown);
+            this.GrassGroupBox.Controls.Add(this.GrassScaleMinNumericUpDown);
+            this.GrassGroupBox.Controls.Add(this.GrassScaleLabel);
+            this.GrassGroupBox.Controls.Add(this.GrassAoNumericUpDown);
+            this.GrassGroupBox.Controls.Add(this.GrassAoLabel);
+            this.GrassGroupBox.Controls.Add(this.GrassColorLabel);
+            this.GrassGroupBox.Controls.Add(this.GrassColorTitleLabel);
+            this.GrassGroupBox.Controls.Add(this.GrassTypeTextBox);
+            this.GrassGroupBox.Controls.Add(this.GrassTypeLabel);
+            this.GrassGroupBox.Location = new System.Drawing.Point(12, 64);
+            this.GrassGroupBox.Name = "GrassGroupBox";
+            this.GrassGroupBox.Size = new System.Drawing.Size(406, 170);
+            this.GrassGroupBox.TabIndex = 4;
+            this.GrassGroupBox.TabStop = false;
+            this.GrassGroupBox.Text = "Grass";
+            this.GrassGroupBox.Visible = false;
+            //
+            // GrassTypeLabel
+            //
+            this.GrassTypeLabel.AutoSize = true;
+            this.GrassTypeLabel.Location = new System.Drawing.Point(8, 24);
+            this.GrassTypeLabel.Name = "GrassTypeLabel";
+            this.GrassTypeLabel.Size = new System.Drawing.Size(60, 13);
+            this.GrassTypeLabel.TabIndex = 0;
+            this.GrassTypeLabel.Text = "Grass type";
+            //
+            // GrassTypeTextBox
+            //
+            this.GrassTypeTextBox.Location = new System.Drawing.Point(100, 21);
+            this.GrassTypeTextBox.Name = "GrassTypeTextBox";
+            this.GrassTypeTextBox.Size = new System.Drawing.Size(220, 20);
+            this.GrassTypeTextBox.TabIndex = 1;
+            this.GrassTypeTextBox.Text = "proc_grasses01";
+            //
+            // GrassColorTitleLabel
+            //
+            this.GrassColorTitleLabel.AutoSize = true;
+            this.GrassColorTitleLabel.Location = new System.Drawing.Point(8, 52);
+            this.GrassColorTitleLabel.Name = "GrassColorTitleLabel";
+            this.GrassColorTitleLabel.Size = new System.Drawing.Size(31, 13);
+            this.GrassColorTitleLabel.TabIndex = 2;
+            this.GrassColorTitleLabel.Text = "Tint (click)";
+            //
+            // GrassColorLabel
+            //
+            this.GrassColorLabel.BackColor = System.Drawing.Color.White;
+            this.GrassColorLabel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.GrassColorLabel.Location = new System.Drawing.Point(100, 48);
+            this.GrassColorLabel.Name = "GrassColorLabel";
+            this.GrassColorLabel.Size = new System.Drawing.Size(120, 21);
+            this.GrassColorLabel.TabIndex = 3;
+            this.GrassColorLabel.Click += new System.EventHandler(this.GrassColorLabel_Click);
+            //
+            // GrassAoLabel
+            //
+            this.GrassAoLabel.AutoSize = true;
+            this.GrassAoLabel.Location = new System.Drawing.Point(8, 80);
+            this.GrassAoLabel.Name = "GrassAoLabel";
+            this.GrassAoLabel.Size = new System.Drawing.Size(21, 13);
+            this.GrassAoLabel.TabIndex = 4;
+            this.GrassAoLabel.Text = "AO";
+            //
+            // GrassAoNumericUpDown
+            //
+            this.GrassAoNumericUpDown.Location = new System.Drawing.Point(100, 78);
+            this.GrassAoNumericUpDown.Maximum = new decimal(new int[] {
+            255,
+            0,
+            0,
+            0});
+            this.GrassAoNumericUpDown.Name = "GrassAoNumericUpDown";
+            this.GrassAoNumericUpDown.Size = new System.Drawing.Size(80, 20);
+            this.GrassAoNumericUpDown.TabIndex = 5;
+            this.GrassAoNumericUpDown.Value = new decimal(new int[] {
+            255,
+            0,
+            0,
+            0});
+            //
+            // GrassScaleLabel
+            //
+            this.GrassScaleLabel.AutoSize = true;
+            this.GrassScaleLabel.Location = new System.Drawing.Point(8, 108);
+            this.GrassScaleLabel.Name = "GrassScaleLabel";
+            this.GrassScaleLabel.Size = new System.Drawing.Size(80, 13);
+            this.GrassScaleLabel.TabIndex = 6;
+            this.GrassScaleLabel.Text = "Scale (0-255)";
+            //
+            // GrassScaleMinNumericUpDown
+            //
+            this.GrassScaleMinNumericUpDown.Location = new System.Drawing.Point(100, 106);
+            this.GrassScaleMinNumericUpDown.Maximum = new decimal(new int[] {
+            255,
+            0,
+            0,
+            0});
+            this.GrassScaleMinNumericUpDown.Name = "GrassScaleMinNumericUpDown";
+            this.GrassScaleMinNumericUpDown.Size = new System.Drawing.Size(70, 20);
+            this.GrassScaleMinNumericUpDown.TabIndex = 7;
+            this.GrassScaleMinNumericUpDown.Value = new decimal(new int[] {
+            160,
+            0,
+            0,
+            0});
+            this.GrassScaleMinNumericUpDown.ValueChanged += new System.EventHandler(this.GrassScaleMinNumericUpDown_ValueChanged);
+            //
+            // GrassScaleMaxNumericUpDown
+            //
+            this.GrassScaleMaxNumericUpDown.Location = new System.Drawing.Point(176, 106);
+            this.GrassScaleMaxNumericUpDown.Maximum = new decimal(new int[] {
+            255,
+            0,
+            0,
+            0});
+            this.GrassScaleMaxNumericUpDown.Name = "GrassScaleMaxNumericUpDown";
+            this.GrassScaleMaxNumericUpDown.Size = new System.Drawing.Size(70, 20);
+            this.GrassScaleMaxNumericUpDown.TabIndex = 8;
+            this.GrassScaleMaxNumericUpDown.Value = new decimal(new int[] {
+            255,
+            0,
+            0,
+            0});
+            this.GrassScaleMaxNumericUpDown.ValueChanged += new System.EventHandler(this.GrassScaleMaxNumericUpDown_ValueChanged);
+            //
+            // GrassInfoLabel
+            //
+            this.GrassInfoLabel.Location = new System.Drawing.Point(8, 134);
+            this.GrassInfoLabel.Name = "GrassInfoLabel";
+            this.GrassInfoLabel.Size = new System.Drawing.Size(390, 32);
+            this.GrassInfoLabel.TabIndex = 9;
+            this.GrassInfoLabel.Text = "Grass is added to nearby batches of the same type in the selected ymap. New batches are created automatically as you paint.";
+            //
             // BrushGroupBox
             //
             this.BrushGroupBox.Controls.Add(this.SpacingNumericUpDown);
@@ -147,12 +323,12 @@ namespace CodeWalker.Project.Panels
             this.BrushGroupBox.Controls.Add(this.CountLabel);
             this.BrushGroupBox.Controls.Add(this.RadiusNumericUpDown);
             this.BrushGroupBox.Controls.Add(this.RadiusLabel);
-            this.BrushGroupBox.Location = new System.Drawing.Point(12, 214);
+            this.BrushGroupBox.Location = new System.Drawing.Point(12, 240);
             this.BrushGroupBox.Name = "BrushGroupBox";
             this.BrushGroupBox.Size = new System.Drawing.Size(200, 150);
-            this.BrushGroupBox.TabIndex = 2;
+            this.BrushGroupBox.TabIndex = 5;
             this.BrushGroupBox.TabStop = false;
-            this.BrushGroupBox.Text = "Brush";
+            this.BrushGroupBox.Text = "Brush ( [ and ] resize )";
             //
             // RadiusLabel
             //
@@ -198,13 +374,13 @@ namespace CodeWalker.Project.Panels
             this.CountLabel.Name = "CountLabel";
             this.CountLabel.Size = new System.Drawing.Size(76, 13);
             this.CountLabel.TabIndex = 2;
-            this.CountLabel.Text = "Props per dab";
+            this.CountLabel.Text = "Items per dab";
             //
             // CountNumericUpDown
             //
             this.CountNumericUpDown.Location = new System.Drawing.Point(110, 48);
             this.CountNumericUpDown.Maximum = new decimal(new int[] {
-            50,
+            200,
             0,
             0,
             0});
@@ -233,12 +409,12 @@ namespace CodeWalker.Project.Panels
             //
             // SpacingNumericUpDown
             //
-            this.SpacingNumericUpDown.DecimalPlaces = 1;
+            this.SpacingNumericUpDown.DecimalPlaces = 2;
             this.SpacingNumericUpDown.Increment = new decimal(new int[] {
             5,
             0,
             0,
-            65536});
+            131072});
             this.SpacingNumericUpDown.Location = new System.Drawing.Point(110, 74);
             this.SpacingNumericUpDown.Name = "SpacingNumericUpDown";
             this.SpacingNumericUpDown.Size = new System.Drawing.Size(80, 20);
@@ -260,10 +436,10 @@ namespace CodeWalker.Project.Panels
             this.PlacementGroupBox.Controls.Add(this.MaxSlopeLabel);
             this.PlacementGroupBox.Controls.Add(this.AlignToSurfaceCheckBox);
             this.PlacementGroupBox.Controls.Add(this.RandomYawCheckBox);
-            this.PlacementGroupBox.Location = new System.Drawing.Point(218, 214);
+            this.PlacementGroupBox.Location = new System.Drawing.Point(218, 240);
             this.PlacementGroupBox.Name = "PlacementGroupBox";
             this.PlacementGroupBox.Size = new System.Drawing.Size(200, 150);
-            this.PlacementGroupBox.TabIndex = 3;
+            this.PlacementGroupBox.TabIndex = 6;
             this.PlacementGroupBox.TabStop = false;
             this.PlacementGroupBox.Text = "Placement";
             //
@@ -417,55 +593,62 @@ namespace CodeWalker.Project.Panels
             // TargetYmapLabel
             //
             this.TargetYmapLabel.AutoSize = true;
-            this.TargetYmapLabel.Location = new System.Drawing.Point(12, 375);
+            this.TargetYmapLabel.Location = new System.Drawing.Point(12, 401);
             this.TargetYmapLabel.Name = "TargetYmapLabel";
             this.TargetYmapLabel.Size = new System.Drawing.Size(80, 13);
-            this.TargetYmapLabel.TabIndex = 4;
+            this.TargetYmapLabel.TabIndex = 7;
             this.TargetYmapLabel.Text = "Paint into YMAP";
             //
             // TargetYmapTextBox
             //
-            this.TargetYmapTextBox.Location = new System.Drawing.Point(110, 372);
+            this.TargetYmapTextBox.Location = new System.Drawing.Point(110, 398);
             this.TargetYmapTextBox.Name = "TargetYmapTextBox";
             this.TargetYmapTextBox.ReadOnly = true;
             this.TargetYmapTextBox.Size = new System.Drawing.Size(308, 20);
-            this.TargetYmapTextBox.TabIndex = 5;
+            this.TargetYmapTextBox.TabIndex = 8;
             this.TargetYmapTextBox.TabStop = false;
             //
             // HelpLabel
             //
-            this.HelpLabel.Location = new System.Drawing.Point(12, 400);
+            this.HelpLabel.Location = new System.Drawing.Point(12, 426);
             this.HelpLabel.Name = "HelpLabel";
-            this.HelpLabel.Size = new System.Drawing.Size(406, 30);
-            this.HelpLabel.TabIndex = 6;
-            this.HelpLabel.Text = "CTRL + left-drag paints props into the selected project YMAP. CTRL + SHIFT + left-" +
-    "drag erases props from the list within the brush.";
+            this.HelpLabel.Size = new System.Drawing.Size(406, 62);
+            this.HelpLabel.TabIndex = 9;
+            this.HelpLabel.Text = "CTRL + left-drag: paint. CTRL + SHIFT + left-drag: erase (red circle).\r\nB: paint on/off. G: swap props/grass. [ and ] (or CTRL + mouse wheel): brush size.";
             //
             // StatusLabel
             //
             this.StatusLabel.AutoEllipsis = true;
-            this.StatusLabel.Location = new System.Drawing.Point(12, 434);
+            this.StatusLabel.Location = new System.Drawing.Point(12, 490);
             this.StatusLabel.Name = "StatusLabel";
             this.StatusLabel.Size = new System.Drawing.Size(406, 18);
-            this.StatusLabel.TabIndex = 7;
+            this.StatusLabel.TabIndex = 10;
             //
             // PaintPropsPanel
             //
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(430, 460);
+            this.ClientSize = new System.Drawing.Size(430, 516);
             this.Controls.Add(this.StatusLabel);
             this.Controls.Add(this.HelpLabel);
             this.Controls.Add(this.TargetYmapTextBox);
             this.Controls.Add(this.TargetYmapLabel);
             this.Controls.Add(this.PlacementGroupBox);
             this.Controls.Add(this.BrushGroupBox);
+            this.Controls.Add(this.GrassGroupBox);
             this.Controls.Add(this.PropsGroupBox);
+            this.Controls.Add(this.ModeGrassRadio);
+            this.Controls.Add(this.ModePropsRadio);
             this.Controls.Add(this.PaintEnabledCheckBox);
             this.Name = "PaintPropsPanel";
-            this.Text = "Paint Props";
+            this.Text = "Paint Props / Grass";
             this.PropsGroupBox.ResumeLayout(false);
             this.PropsGroupBox.PerformLayout();
+            this.GrassGroupBox.ResumeLayout(false);
+            this.GrassGroupBox.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.GrassAoNumericUpDown)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.GrassScaleMinNumericUpDown)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.GrassScaleMaxNumericUpDown)).EndInit();
             this.BrushGroupBox.ResumeLayout(false);
             this.BrushGroupBox.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.SpacingNumericUpDown)).EndInit();
@@ -485,12 +668,25 @@ namespace CodeWalker.Project.Panels
         #endregion
 
         private System.Windows.Forms.CheckBox PaintEnabledCheckBox;
+        private System.Windows.Forms.RadioButton ModePropsRadio;
+        private System.Windows.Forms.RadioButton ModeGrassRadio;
         private System.Windows.Forms.GroupBox PropsGroupBox;
         private System.Windows.Forms.Button RemoveButton;
         private System.Windows.Forms.ListBox PropsListBox;
         private System.Windows.Forms.Button AddSelectedButton;
         private System.Windows.Forms.Button AddButton;
         private System.Windows.Forms.TextBox PropNameTextBox;
+        private System.Windows.Forms.GroupBox GrassGroupBox;
+        private System.Windows.Forms.Label GrassTypeLabel;
+        private System.Windows.Forms.TextBox GrassTypeTextBox;
+        private System.Windows.Forms.Label GrassColorTitleLabel;
+        private System.Windows.Forms.Label GrassColorLabel;
+        private System.Windows.Forms.Label GrassAoLabel;
+        private System.Windows.Forms.NumericUpDown GrassAoNumericUpDown;
+        private System.Windows.Forms.Label GrassScaleLabel;
+        private System.Windows.Forms.NumericUpDown GrassScaleMinNumericUpDown;
+        private System.Windows.Forms.NumericUpDown GrassScaleMaxNumericUpDown;
+        private System.Windows.Forms.Label GrassInfoLabel;
         private System.Windows.Forms.GroupBox BrushGroupBox;
         private System.Windows.Forms.NumericUpDown SpacingNumericUpDown;
         private System.Windows.Forms.Label SpacingLabel;
