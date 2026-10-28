@@ -2198,15 +2198,11 @@ namespace CodeWalker.GameFiles
         public void WriteChildSoundsXml(StringBuilder sb, int indent, string nodeName = "ChildSounds")
         {
             if (ChildSoundsHashes == null) return;
-
-            // Filter out empty hashes
-            var nonEmptyHashes = ChildSoundsHashes.Where(h => h != 0).ToArray();
-
-            if (nonEmptyHashes.Length > 0)
+            if (ChildSoundsHashes.Length > 0)
             {
                 RelXml.OpenTag(sb, indent, nodeName);
                 var cind = indent + 1;
-                foreach (var hash in nonEmptyHashes)
+                foreach (var hash in ChildSoundsHashes)
                 {
                     RelXml.StringTag(sb, cind, "Item", RelXml.HashString(hash));
                 }

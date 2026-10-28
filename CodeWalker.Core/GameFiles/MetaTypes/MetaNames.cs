@@ -20893,7 +20893,6 @@ namespace CodeWalker.GameFiles
         firstpersonanimatedrecoil = 4052256928,
         firstpersonsecondarymotion = 1653069127,
         blockadditives = 3871198509,
-        fpsusegripattachment = 3871198509,
         fpsswimming = 4164615727,
         fpsaimintrotransition = 2091288652,
         movingintronetwork = 509364343,

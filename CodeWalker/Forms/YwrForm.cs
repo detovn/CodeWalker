@@ -69,7 +69,7 @@ namespace CodeWalker.Forms
         private string GenerateText()
         {
             var sb = new StringBuilder();
-            sb.AppendLine("PositionX, PositionY, PositionZ, Unk0, Unk1, Unk2, Unk3");
+            sb.AppendLine("PositionX, PositionY, PositionZ, Flags, Heading, MoveBlendRatio, FreeSpaceOnLeft, FreeSpaceOnRight");
             foreach (var entry in ywr.Waypoints.Entries)
             {
                 sb.Append(FloatUtil.ToString(entry.Position.X));
@@ -81,7 +81,6 @@ namespace CodeWalker.Forms
                 sb.Append(entry.Flags0.ToString());
                 sb.Append(", ");
                 sb.Append(entry.Flags1.ToString());
-                sb.Append(", ");
                 sb.AppendLine();
             }
             return sb.ToString();

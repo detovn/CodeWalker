@@ -316,6 +316,7 @@ namespace CodeWalker.Tools
 
         private void ExportBotton_Click(object sender, EventArgs e)
         {
+            if (HierarchyTreeView.SelectedNode == null) return;
             SaveFileDialog saveFileDialog = new SaveFileDialog();
             saveFileDialog.FileName = HierarchyTreeView.SelectedNode.Text.Replace(" : ", ":").Split(':')[0] + ".xml";
             if (saveFileDialog.ShowDialog() == DialogResult.OK)

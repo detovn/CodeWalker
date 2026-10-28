@@ -59,6 +59,11 @@ namespace CodeWalker.Project.Panels
         public void SetProject(ProjectFile project)
         {
             CurrentProjectFile = project;
+
+            if (string.IsNullOrEmpty(OutputPathTextBox.Text) && !string.IsNullOrEmpty(project?.Filepath))
+            {
+                OutputPathTextBox.Text = project.GetFullFilePath("lodlights");
+            }
         }
 
         private void BrowseButton_Click(object sender, EventArgs e)
@@ -110,6 +115,39 @@ namespace CodeWalker.Project.Panels
             catch { }
         }
 
+        private void ShowMessage(string text)
+        {
+            try
+            {
+                if (InvokeRequired)
+                {
+                    Invoke(new Action(() => { ShowMessage(text); }));
+                }
+                else
+                {
+                    MessageBox.Show(text);
+                }
+            }
+            catch { }
+        }
+
+        private void AddYmapsToProject(List<YmapFile> ymaps)
+        {
+            if (ProjectForm == null) return;
+            if (ProjectForm.InvokeRequired)
+            {
+                ProjectForm.Invoke(new Action(() => { AddYmapsToProject(ymaps); }));
+            }
+            else
+            {
+                foreach (var ymap in ymaps)
+                {
+                    ProjectForm.AddYmapToProject(ymap);
+                    ymap.HasChanged = false; //already saved to disk
+                }
+            }
+        }
+
         private static byte PackU8(float val, float range)
         {
             return (byte)Math.Max(Math.Min(Math.Round(val * (255.0f / range)), 255), 0);
@@ -144,303 +182,334 @@ namespace CodeWalker.Project.Panels
             var gameFileCache = ProjectForm?.WorldForm?.GameFileCache;
             if (gameFileCache == null) return;
 
+            var projectFile = ProjectForm.CurrentProjectFile;
+            if (projectFile == null) return;
+
             var outputDir = OutputPathTextBox.Text;
-            if (string.IsNullOrEmpty(outputDir) || !Directory.Exists(outputDir))
+            if (string.IsNullOrEmpty(outputDir))
             {
                 MessageBox.Show("Please select a valid output directory.");
                 return;
             }
+            if (!Directory.Exists(outputDir))
+            {
+                try
+                {
+                    Directory.CreateDirectory(outputDir);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Please select a valid output directory.\n" + ex.Message);
+                    return;
+                }
+            }
 
             GenerateButton.Enabled = false;
 
-            List<YmapFile> projectYmaps = ProjectForm.CurrentProjectFile.YmapFiles;
+            List<YmapFile> projectYmaps = new List<YmapFile>(projectFile.YmapFiles);
 
             var pname = NameTextBox.Text;
 
             Task.Run(async () =>
             {
-                var lightsSmall = new List<Light>();
-                var lightsMedium = new List<Light>();
-                var lightsLarge = new List<Light>();
-
-                // Collect all entities and deduplicate archetypes for batch loading
-                var allEntities = new List<(YmapEntityDef ent, string entName)>();
-                var uniqueArchetypes = new HashSet<uint>();
-
-                foreach (var ymap in projectYmaps)
+                try
                 {
-                    if (ymap?.AllEntities == null) continue;
-                    foreach (var ent in ymap.AllEntities)
+                    var lightsSmall = new List<Light>();
+                    var lightsMedium = new List<Light>();
+                    var lightsLarge = new List<Light>();
+
+                    // Collect all entities and deduplicate archetypes for batch loading
+                    var allEntities = new List<(YmapEntityDef ent, string entName)>();
+                    var uniqueArchetypes = new HashSet<uint>();
+
+                    foreach (var ymap in projectYmaps)
                     {
-                        if (ent.Archetype == null) continue;
-                        var entName = ent.Archetype.Name?.ToString() ?? "";
-                        if (entName.Contains("prop_dock_bouy")) continue;
-                        allEntities.Add((ent, entName));
-                        uniqueArchetypes.Add(ent.Archetype.Hash);
+                        if (ymap?.AllEntities == null) continue;
+                        foreach (var ent in ymap.AllEntities)
+                        {
+                            if (ent.Archetype == null) continue;
+                            var entName = ent.Archetype.Name?.ToString() ?? "";
+                            if (entName.Contains("prop_dock_bouy")) continue;
+                            allEntities.Add((ent, entName));
+                            uniqueArchetypes.Add(ent.Archetype.Hash);
+                        }
                     }
-                }
 
-                // Pre-request all unique drawables so they start loading in parallel
-                UpdateStatus($"Requesting {uniqueArchetypes.Count} unique drawables...");
-                var drawableCache = new Dictionary<uint, DrawableBase>();
-                var pendingArchetypes = new HashSet<uint>();
+                    // Pre-request all unique drawables so they start loading in parallel
+                    UpdateStatus($"Requesting {uniqueArchetypes.Count} unique drawables...");
+                    var drawableCache = new Dictionary<uint, DrawableBase>();
+                    var pendingArchetypes = new HashSet<uint>();
 
-                foreach (var (ent, _) in allEntities)
-                {
-                    var hash = ent.Archetype.Hash;
-                    if (drawableCache.ContainsKey(hash) || pendingArchetypes.Contains(hash)) continue;
-
-                    var (dwbl, waiting) = await gameFileCache.TryGetDrawableAsync(ent.Archetype);
-                    if (dwbl != null)
-                    {
-                        drawableCache[hash] = dwbl;
-                    }
-                    else if (waiting)
-                    {
-                        pendingArchetypes.Add(hash);
-                    }
-                }
-
-                // Wait for all pending drawables to finish loading (10s timeout per drawable)
-                if (pendingArchetypes.Count > 0)
-                {
-                    UpdateStatus($"Waiting for {pendingArchetypes.Count} drawables to load...");
-                    var archetypeLookup = new Dictionary<uint, Archetype>();
                     foreach (var (ent, _) in allEntities)
                     {
                         var hash = ent.Archetype.Hash;
-                        if (pendingArchetypes.Contains(hash) && !archetypeLookup.ContainsKey(hash))
+                        if (drawableCache.ContainsKey(hash) || pendingArchetypes.Contains(hash)) continue;
+
+                        var (dwbl, waiting) = await gameFileCache.TryGetDrawableAsync(ent.Archetype);
+                        if (dwbl != null)
                         {
-                            archetypeLookup[hash] = ent.Archetype;
+                            drawableCache[hash] = dwbl;
+                        }
+                        else if (waiting)
+                        {
+                            pendingArchetypes.Add(hash);
                         }
                     }
 
-                    var pendingTimers = new Dictionary<uint, System.Diagnostics.Stopwatch>();
-                    foreach (var hash in pendingArchetypes)
+                    // Wait for all pending drawables to finish loading (10s timeout per drawable)
+                    if (pendingArchetypes.Count > 0)
                     {
-                        var sw = new System.Diagnostics.Stopwatch();
-                        sw.Start();
-                        pendingTimers[hash] = sw;
-                    }
+                        UpdateStatus($"Waiting for {pendingArchetypes.Count} drawables to load...");
+                        var archetypeLookup = new Dictionary<uint, Archetype>();
+                        foreach (var (ent, _) in allEntities)
+                        {
+                            var hash = ent.Archetype.Hash;
+                            if (pendingArchetypes.Contains(hash) && !archetypeLookup.ContainsKey(hash))
+                            {
+                                archetypeLookup[hash] = ent.Archetype;
+                            }
+                        }
 
-                    while (pendingArchetypes.Count > 0)
-                    {
-                        await Task.Delay(3);
-                        var resolved = new List<uint>();
+                        var pendingTimers = new Dictionary<uint, System.Diagnostics.Stopwatch>();
                         foreach (var hash in pendingArchetypes)
                         {
-                            var (dwbl, waiting) = await gameFileCache.TryGetDrawableAsync(archetypeLookup[hash]);
-                            if (dwbl != null)
-                            {
-                                drawableCache[hash] = dwbl;
-                                resolved.Add(hash);
-                            }
-                            else if (!waiting)
-                            {
-                                resolved.Add(hash);
-                            }
-                            else if (pendingTimers[hash].Elapsed.TotalMinutes >= 1.0)
-                            {
-                                UpdateStatus($"Timed out loading {hash} after 1 minute, skipping...");
-                                resolved.Add(hash);
-                            }
+                            var sw = new System.Diagnostics.Stopwatch();
+                            sw.Start();
+                            pendingTimers[hash] = sw;
                         }
-                        foreach (var hash in resolved)
+
+                        while (pendingArchetypes.Count > 0)
                         {
-                            pendingArchetypes.Remove(hash);
-                            pendingTimers.Remove(hash);
-                        }
-                        if (pendingArchetypes.Count > 0)
-                        {
-                            UpdateStatus($"Waiting for {pendingArchetypes.Count} drawables to load...");
+                            await Task.Delay(3);
+                            var resolved = new List<uint>();
+                            foreach (var hash in pendingArchetypes)
+                            {
+                                var (dwbl, waiting) = await gameFileCache.TryGetDrawableAsync(archetypeLookup[hash]);
+                                if (dwbl != null)
+                                {
+                                    drawableCache[hash] = dwbl;
+                                    resolved.Add(hash);
+                                }
+                                else if (!waiting)
+                                {
+                                    resolved.Add(hash);
+                                }
+                                else if (pendingTimers[hash].Elapsed.TotalMinutes >= 1.0)
+                                {
+                                    UpdateStatus($"Timed out loading {hash} after 1 minute, skipping...");
+                                    resolved.Add(hash);
+                                }
+                            }
+                            foreach (var hash in resolved)
+                            {
+                                pendingArchetypes.Remove(hash);
+                                pendingTimers.Remove(hash);
+                            }
+                            if (pendingArchetypes.Count > 0)
+                            {
+                                UpdateStatus($"Waiting for {pendingArchetypes.Count} drawables to load...");
+                            }
                         }
                     }
-                }
 
-                // Process all entities using cached drawables
-                UpdateStatus($"Processing {allEntities.Count} entities...");
-                foreach (var (ent, entName) in allEntities)
-                {
-                    if (!drawableCache.TryGetValue(ent.Archetype.Hash, out var dwbl)) continue;
-
-                    ent.EnsureLights(dwbl);
-                    var elights = ent.Lights;
-                    if (elights == null) continue;
-
-                    var archBB = new BoundingBox(ent.Archetype.BBMin, ent.Archetype.BBMax).Transform(ent.Position, ent.Orientation, ent.Scale);
-                    var hashInts = new uint[7];
-                    hashInts[0] = (uint)(int)(archBB.Minimum.X * 10.0f);
-                    hashInts[1] = (uint)(int)(archBB.Minimum.Y * 10.0f);
-                    hashInts[2] = (uint)(int)(archBB.Minimum.Z * 10.0f);
-                    hashInts[3] = (uint)(int)(archBB.Maximum.X * 10.0f);
-                    hashInts[4] = (uint)(int)(archBB.Maximum.Y * 10.0f);
-                    hashInts[5] = (uint)(int)(archBB.Maximum.Z * 10.0f);
-                    int exts = ent.Archetype.Extensions?.Length ?? 0;
-
-                    bool isStreetLight = entName.Contains("streetlight") || entName.Contains("street_light") || entName.Contains("nylamp") || entName.Contains("nytraf");
-
-                    for (int li = 0; li < elights.Length; li++)
+                    // Process all entities using cached drawables
+                    UpdateStatus($"Processing {allEntities.Count} entities...");
+                    foreach (var (ent, entName) in allEntities)
                     {
-                        var elight = elights[li];
-                        var la = elight.Attributes;
+                        if (!drawableCache.TryGetValue(ent.Archetype.Hash, out var dwbl)) continue;
 
-                        if (la.LightFadeDistance > 0) continue;
+                        ent.EnsureLights(dwbl);
+                        var elights = ent.Lights;
+                        if (elights == null) continue;
 
-                        uint flags = la.Flags;
+                        var archBB = new BoundingBox(ent.Archetype.BBMin, ent.Archetype.BBMax).Transform(ent.Position, ent.Orientation, ent.Scale);
+                        var hashInts = new uint[7];
+                        hashInts[0] = (uint)(int)(archBB.Minimum.X * 10.0f);
+                        hashInts[1] = (uint)(int)(archBB.Minimum.Y * 10.0f);
+                        hashInts[2] = (uint)(int)(archBB.Minimum.Z * 10.0f);
+                        hashInts[3] = (uint)(int)(archBB.Maximum.X * 10.0f);
+                        hashInts[4] = (uint)(int)(archBB.Maximum.Y * 10.0f);
+                        hashInts[5] = (uint)(int)(archBB.Maximum.Z * 10.0f);
+                        int exts = ent.Archetype.Extensions?.Length ?? 0;
 
-                        // skip vehicle, FX, moving, and buzzing/flashing lights - these don't belong in LOD lights
-                        if ((flags & (LIGHTFLAG_VEHICLE | LIGHTFLAG_FX | LIGHTFLAG_MOVING_LIGHT_SOURCE | LIGHTFLAG_ENABLE_BUZZING | LIGHTFLAG_FORCE_BUZZING)) != 0)
-                            continue;
+                        bool isStreetLight = entName.Contains("streetlight") || entName.Contains("street_light") || entName.Contains("nylamp") || entName.Contains("nytraf");
 
-                        // skip flashing lights (Flashiness > 0 means the light flickers/flashes at runtime)
-                        if (la.Flashiness > 0) continue;
-
-                        bool isCoronaOnly = (flags & (LIGHTFLAG_CORONA_ONLY | LIGHTFLAG_CORONA_ONLY_LOD_LIGHT)) != 0;
-
-                        // skip lights with zero intensity unless they are corona-only
-                        if (la.Intensity <= 0 && !isCoronaOnly) continue;
-
-                        // skip lights that are too small to matter as LOD lights (tiny falloff and low intensity)
-                        if (la.Falloff < 2.0f && la.Intensity < 0.5f && !isCoronaOnly && (flags & LIGHTFLAG_FAR_LOD_LIGHT) == 0)
-                            continue;
-
-                        uint type = (uint)la.Type;
-                        float capsuleExtent = la.Extent.X;
-
-                        if (type == (uint)LightType.Capsule)
+                        for (int li = 0; li < elights.Length; li++)
                         {
-                            float minCapsuleExtent = MAX_LODLIGHT_CAPSULE_EXTENT / 255.0f;
-                            if (capsuleExtent < minCapsuleExtent)
+                            var elight = elights[li];
+                            var la = elight.Attributes;
+
+                            if (la.LightFadeDistance > 0) continue;
+
+                            uint flags = la.Flags;
+
+                            // skip vehicle, FX, moving, and buzzing/flashing lights - these don't belong in LOD lights
+                            if ((flags & (LIGHTFLAG_VEHICLE | LIGHTFLAG_FX | LIGHTFLAG_MOVING_LIGHT_SOURCE | LIGHTFLAG_ENABLE_BUZZING | LIGHTFLAG_FORCE_BUZZING)) != 0)
+                                continue;
+
+                            // skip flashing lights (Flashiness > 0 means the light flickers/flashes at runtime)
+                            if (la.Flashiness > 0) continue;
+
+                            bool isCoronaOnly = (flags & (LIGHTFLAG_CORONA_ONLY | LIGHTFLAG_CORONA_ONLY_LOD_LIGHT)) != 0;
+
+                            // skip lights with zero intensity unless they are corona-only
+                            if (la.Intensity <= 0 && !isCoronaOnly) continue;
+
+                            // skip lights that are too small to matter as LOD lights (tiny falloff and low intensity)
+                            if (la.Falloff < 2.0f && la.Intensity < 0.5f && !isCoronaOnly && (flags & LIGHTFLAG_FAR_LOD_LIGHT) == 0)
+                                continue;
+
+                            uint type = (uint)la.Type;
+                            float capsuleExtent = la.Extent.X;
+
+                            if (type == (uint)LightType.Capsule)
                             {
-                                type = (uint)LightType.Point;
+                                float minCapsuleExtent = MAX_LODLIGHT_CAPSULE_EXTENT / 255.0f;
+                                if (capsuleExtent < minCapsuleExtent)
+                                {
+                                    type = (uint)LightType.Point;
+                                }
+                            }
+
+                            uint r = la.ColorR;
+                            uint g = la.ColorG;
+                            uint b = la.ColorB;
+                            uint packedIntensity = PackU8(la.Intensity, MAX_LODLIGHT_INTENSITY);
+                            uint colour = (packedIntensity << 24) + (r << 16) + (g << 8) + b;
+
+                            byte inner = PackU8(la.ConeInnerAngle, MAX_LODLIGHT_CONE_ANGLE);
+                            byte outer;
+                            if (type == (uint)LightType.Capsule)
+                            {
+                                outer = PackU8(capsuleExtent, MAX_LODLIGHT_CAPSULE_EXTENT);
+                            }
+                            else
+                            {
+                                outer = PackU8(la.ConeOuterAngle, MAX_LODLIGHT_CONE_ANGLE);
+                            }
+
+                            byte packedCorona = 0;
+                            if (la.CoronaSize >= 0.05f && la.CoronaIntensity > 0)
+                            {
+                                packedCorona = PackU8(la.CoronaIntensity, MAX_LODLIGHT_CORONA_INTENSITY);
+                            }
+
+                            // if TimeFlags is 0 the source light has no time restriction - default to always on
+                            // in the LOD system 0 means "never visible" so we must set all 24 hour bits
+                            uint rawTimeFlags = la.TimeFlags & 0x00FFFFFFu;
+                            uint timeAndState = (rawTimeFlags != 0) ? rawTimeFlags : 0x00FFFFFFu;
+                            if (isStreetLight)
+                            {
+                                timeAndState |= (1u << 24);
+                            }
+                            if (isCoronaOnly)
+                            {
+                                timeAndState |= (1u << 25);
+                            }
+                            timeAndState |= (type << 26);
+                            if ((flags & LIGHTFLAG_DONT_USE_IN_CUTSCENE) != 0)
+                            {
+                                timeAndState |= (1u << 31);
+                            }
+
+                            var light = new Light();
+                            light.position = new MetaVECTOR3(elight.Position);
+                            light.colour = colour;
+                            light.direction = new MetaVECTOR3(elight.Direction);
+                            light.falloff = la.Falloff;
+                            light.falloffExponent = la.FalloffExponent;
+                            light.timeAndStateFlags = timeAndState;
+                            hashInts[6] = (uint)(exts + li);
+                            light.hash = YmapEntityDef.ComputeLightHash(hashInts);
+                            light.coneInnerAngle = inner;
+                            light.coneOuterAngleOrCapExt = outer;
+                            light.coronaIntensity = packedCorona;
+                            light.isStreetLight = isStreetLight;
+
+                            int category = GetLightCategory(la, capsuleExtent);
+                            switch (category)
+                            {
+                                case LIGHT_CATEGORY_LARGE:
+                                    lightsLarge.Add(light);
+                                    break;
+                                case LIGHT_CATEGORY_MEDIUM:
+                                    lightsMedium.Add(light);
+                                    break;
+                                default:
+                                    lightsSmall.Add(light);
+                                    break;
                             }
                         }
+                    }
 
-                        uint r = la.ColorR;
-                        uint g = la.ColorG;
-                        uint b = la.ColorB;
-                        uint packedIntensity = PackU8(la.Intensity, MAX_LODLIGHT_INTENSITY);
-                        uint colour = (packedIntensity << 24) + (r << 16) + (g << 8) + b;
+                    int totalLights = lightsSmall.Count + lightsMedium.Count + lightsLarge.Count;
 
-                        byte inner = PackU8(la.ConeInnerAngle, MAX_LODLIGHT_CONE_ANGLE);
-                        byte outer;
-                        if (type == (uint)LightType.Capsule)
-                        {
-                            outer = PackU8(capsuleExtent, MAX_LODLIGHT_CAPSULE_EXTENT);
-                        }
-                        else
-                        {
-                            outer = PackU8(la.ConeOuterAngle, MAX_LODLIGHT_CONE_ANGLE);
-                        }
+                    if (totalLights == 0)
+                    {
+                        UpdateStatus("No lights found in project!");
+                        ShowMessage("No lights found in project!");
+                        return;
+                    }
 
-                        byte packedCorona = 0;
-                        if (la.CoronaSize >= 0.05f && la.CoronaIntensity > 0)
-                        {
-                            packedCorona = PackU8(la.CoronaIntensity, MAX_LODLIGHT_CORONA_INTENSITY);
-                        }
+                    UpdateStatus($"Collected {totalLights} lights (S:{lightsSmall.Count} M:{lightsMedium.Count} L:{lightsLarge.Count}). Chopping into grid cells...");
 
-                        // if TimeFlags is 0 the source light has no time restriction - default to always on
-                        // in the LOD system 0 means "never visible" so we must set all 24 hour bits
-                        uint rawTimeFlags = la.TimeFlags & 0x00FFFFFFu;
-                        uint timeAndState = (rawTimeFlags != 0) ? rawTimeFlags : 0x00FFFFFFu;
-                        if (isStreetLight)
-                        {
-                            timeAndState |= (1u << 24);
-                        }
-                        if (isCoronaOnly)
-                        {
-                            timeAndState |= (1u << 25);
-                        }
-                        timeAndState |= (type << 26);
-                        if ((flags & LIGHTFLAG_DONT_USE_IN_CUTSCENE) != 0)
-                        {
-                            timeAndState |= (1u << 31);
-                        }
+                    var categoryLights = new[] { lightsSmall, lightsMedium, lightsLarge };
+                    var allYmaps = new List<YmapFile>();
 
-                        var light = new Light();
-                        light.position = new MetaVECTOR3(elight.Position);
-                        light.colour = colour;
-                        light.direction = new MetaVECTOR3(elight.Direction);
-                        light.falloff = la.Falloff;
-                        light.falloffExponent = la.FalloffExponent;
-                        light.timeAndStateFlags = timeAndState;
-                        hashInts[6] = (uint)(exts + li);
-                        light.hash = YmapEntityDef.ComputeLightHash(hashInts);
-                        light.coneInnerAngle = inner;
-                        light.coneOuterAngleOrCapExt = outer;
-                        light.coronaIntensity = packedCorona;
-                        light.isStreetLight = isStreetLight;
+                    for (int cat = 0; cat < 3; cat++)
+                    {
+                        var lights = categoryLights[cat];
+                        if (lights.Count == 0) continue;
 
-                        int category = GetLightCategory(la, capsuleExtent);
-                        switch (category)
+                        var cells = ChopLightsIntoGrid(lights);
+
+                        UpdateStatus($"Building {cells.Count} ymap pairs for {CategoryLabels[cat]} category...");
+
+                        for (int ci = 0; ci < cells.Count; ci++)
                         {
-                            case LIGHT_CATEGORY_LARGE:
-                                lightsLarge.Add(light);
-                                break;
-                            case LIGHT_CATEGORY_MEDIUM:
-                                lightsMedium.Add(light);
-                                break;
-                            default:
-                                lightsSmall.Add(light);
-                                break;
+                            var cell = cells[ci];
+
+                            cell.Lights.Sort((a, b) =>
+                            {
+                                if (a.isStreetLight != b.isStreetLight) return b.isStreetLight.CompareTo(a.isStreetLight);
+                                return a.hash.CompareTo(b.hash);
+                            });
+
+                            var (lodymap, distymap) = BuildYmapPair(cell.Lights, pname, cat, ci);
+                            allYmaps.Add(lodymap);
+                            allYmaps.Add(distymap);
                         }
                     }
+
+                    UpdateStatus($"Saving {allYmaps.Count} ymaps to {outputDir}...");
+
+                    var savedYmaps = new List<YmapFile>();
+                    foreach (var ymap in allYmaps)
+                    {
+                        var data = ymap.Save();
+                        if (data != null)
+                        {
+                            var filePath = Path.Combine(outputDir, ymap.RpfFileEntry.Name);
+                            File.WriteAllBytes(filePath, data);
+                            ymap.FilePath = filePath;
+                            savedYmaps.Add(ymap);
+                        }
+                    }
+
+                    UpdateStatus("Adding new ymap files to project...");
+                    AddYmapsToProject(savedYmaps);
+
+                    int totalYmaps = allYmaps.Count / 2;
+                    UpdateStatus($"Process complete. {totalLights} lights (S:{lightsSmall.Count} M:{lightsMedium.Count} L:{lightsLarge.Count}) in {totalYmaps} ymap pairs saved to {outputDir}");
                 }
-
-                int totalLights = lightsSmall.Count + lightsMedium.Count + lightsLarge.Count;
-
-                if (totalLights == 0)
+                catch (Exception ex)
                 {
-                    MessageBox.Show("No lights found in project!");
+                    UpdateStatus("Error: " + ex.Message);
+                }
+                finally
+                {
                     GenerateComplete();
-                    return;
                 }
-
-                UpdateStatus($"Collected {totalLights} lights (S:{lightsSmall.Count} M:{lightsMedium.Count} L:{lightsLarge.Count}). Chopping into grid cells...");
-
-                var categoryLights = new[] { lightsSmall, lightsMedium, lightsLarge };
-                var allYmaps = new List<YmapFile>();
-
-                for (int cat = 0; cat < 3; cat++)
-                {
-                    var lights = categoryLights[cat];
-                    if (lights.Count == 0) continue;
-
-                    var cells = ChopLightsIntoGrid(lights);
-
-                    UpdateStatus($"Building {cells.Count} ymap pairs for {CategoryLabels[cat]} category...");
-
-                    for (int ci = 0; ci < cells.Count; ci++)
-                    {
-                        var cell = cells[ci];
-
-                        cell.Lights.Sort((a, b) =>
-                        {
-                            if (a.isStreetLight != b.isStreetLight) return b.isStreetLight.CompareTo(a.isStreetLight);
-                            return a.hash.CompareTo(b.hash);
-                        });
-
-                        var (lodymap, distymap) = BuildYmapPair(cell.Lights, pname, cat, ci);
-                        allYmaps.Add(lodymap);
-                        allYmaps.Add(distymap);
-                    }
-                }
-
-                UpdateStatus($"Saving {allYmaps.Count} ymaps to {outputDir}...");
-
-                foreach (var ymap in allYmaps)
-                {
-                    var data = ymap.Save();
-                    if (data != null)
-                    {
-                        var filePath = Path.Combine(outputDir, ymap.RpfFileEntry.Name);
-                        File.WriteAllBytes(filePath, data);
-                    }
-                }
-
-                int totalYmaps = allYmaps.Count / 2;
-                UpdateStatus($"Process complete. {totalLights} lights (S:{lightsSmall.Count} M:{lightsMedium.Count} L:{lightsLarge.Count}) in {totalYmaps} ymap pairs saved to {outputDir}");
-                GenerateComplete();
             });
         }
 

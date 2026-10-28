@@ -223,6 +223,8 @@ namespace CodeWalker
             TrainTrackNode = null;
             LodLight = null;
             MloEntityDef = null;
+            MloRoomDef = null;
+            MloPortalDef = null;
             ScenarioNode = null;
             ScenarioEdge = null;
             Audio = null;

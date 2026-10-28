@@ -89,7 +89,6 @@ namespace CodeWalker.Rendering
         private Camera Camera;
         public ShaderGlobalLights GlobalLights = new ShaderGlobalLights();
         public bool PathsDepthClip = true;//false;//
-        public Vector3? SelectedScenarioNodePosition = null; // Position of selected scenario node to exclude from cube rendering
 
         private GameFileCache GameFileCache;
         private RenderableCache RenderableCache;
@@ -655,7 +654,7 @@ namespace CodeWalker.Rendering
                 context.OutputMerger.DepthStencilState = PathsDepthClip ? dsDisableWrite : dsDisableAll;// dsEnabled; //
                 context.Rasterizer.State = rsSolid;
 
-                Paths.RenderBatches(context, RenderPathBatches, camera, GlobalLights, SelectedScenarioNodePosition);
+                Paths.RenderBatches(context, RenderPathBatches, camera, GlobalLights);
             }
 
 

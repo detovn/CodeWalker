@@ -437,9 +437,6 @@ namespace CodeWalker
 
             Renderer.SelectedDrawable = SelectedItem.Drawable;
 
-            // Set the selected scenario node position to exclude its cube from rendering
-            Renderer.shaders.SelectedScenarioNodePosition = SelectedItem.ScenarioNode?.Position;
-
             if (renderworld)
             {
                 RenderWorld();
@@ -1848,13 +1845,13 @@ namespace CodeWalker
 
             if (SnapMultiSelectEach && SelectedItem.MultipleSelectionItems != null)
             {
+                var dpos = newpos - SelectedItem.MultipleSelectionCenter;
                 for (int i = 0; i < SelectedItem.MultipleSelectionItems.Length; i++)
                 {
                     MapSelection item = SelectedItem.MultipleSelectionItems[i];
-                    Vector3 posToGround = item.WidgetPosition;
-                    posToGround.Z = newpos.Z;
-                    
-                    Vector3 tempNewPos = SnapPosition(posToGround);
+                    if ((item.CollisionVertex != null) || (item.CollisionPoly != null)) continue;//skip collision verts/polys
+
+                    Vector3 tempNewPos = SnapPosition(item.WidgetPosition + dpos);
 
                     if (tempNewPos == item.WidgetPosition) continue;
 
@@ -7181,12 +7178,26 @@ namespace CodeWalker
 
         private void ToolsMenuConfigureGame_Click(object sender, EventArgs e)
         {
+            var oldFolder = GTAFolder.CurrentGTAFolder;
+            var oldGen9 = GTAFolder.IsGen9;
             var result = GTAFolder.UpdateGTAFolder(false, false);
             if (result)
             {
-                MessageBox.Show("CodeWalker will now restart.");
-                Application.Restart();
-                Environment.Exit(0);
+                var changed = !string.Equals(oldFolder, GTAFolder.CurrentGTAFolder, StringComparison.OrdinalIgnoreCase) || (oldGen9 != GTAFolder.IsGen9);
+                if (changed)
+                {
+                    if (MessageBox.Show("CodeWalker needs to restart to apply this change. Restart now?", "Restart required", MessageBoxButtons.YesNo) == DialogResult.Yes)
+                    {
+                        var ce = new System.ComponentModel.CancelEventArgs();
+                        Application.Exit(ce);
+                        if (!ce.Cancel)
+                        {
+                            var args = string.Join(" ", Environment.GetCommandLineArgs().Skip(1).Select(a => "\"" + a.Replace("\"", "\\\"") + "\""));
+                            System.Diagnostics.Process.Start(Application.ExecutablePath, args);
+                            Environment.Exit(0);
+                        }
+                    }
+                }
             }
         }
 

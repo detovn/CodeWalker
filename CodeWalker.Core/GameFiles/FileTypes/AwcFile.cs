@@ -583,7 +583,7 @@ namespace CodeWalker.GameFiles
                 //if ((stream.PeakChunk != null) && (stream.FormatChunk.Peak == null))
                 //{ }//no hit
 
-                var pcmData = stream.GetPcmData();
+                var pcmData = stream.GetPcmData(false);
                 var codec = stream.FormatChunk.Codec;
                 var smpCount = stream.FormatChunk.Samples;
                 var peak0 = stream.FormatChunk.PeakVal;//orig value for comparison
@@ -1207,12 +1207,19 @@ namespace CodeWalker.GameFiles
                         }
                         else
                         {
-                            if (filepath.EndsWith(".wav"))
+                            if (filepath.EndsWith(".wav", StringComparison.OrdinalIgnoreCase))
                                 ParseWavFile(fdata);
-                                
-                            else if (filepath.EndsWith(".mp3"))
+
+                            else if (filepath.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase))
                             {
-                                StreamFormat.Codec = AwcCodecType.MP3;
+                                if (StreamFormat != null)
+                                {
+                                    StreamFormat.Codec = AwcCodecType.MP3;
+                                }
+                                else if (FormatChunk != null)
+                                {
+                                    FormatChunk.Codec = AwcCodecType.MP3;
+                                }
                                 ParseMp3File(fdata);
                             }
                         }
@@ -1568,7 +1575,7 @@ namespace CodeWalker.GameFiles
                 bitsPerSample = 4;
                 formatcodec = 17;
                 blockAlign = 2048; // (short)(blockAlign / 4);//  //2048;// (short)(256 * (4 * channels));// (short)(36 * channels);//256;// 2048;// 
-                byteRate = byteRate / 4 + 41;// SamplesPerSecond * blockAlign / samples_per_block;// (int)(SamplesPerSecond * 0.50685 * channels);
+                byteRate = SamplesPerSecond * 2048 / 4089;// 2048 byte block = 4089 mono samples (1 in header + 2044*2 nibbles) // SamplesPerSecond * blockAlign / samples_per_block;// (int)(SamplesPerSecond * 0.50685 * channels);
                 samplesPerBlock = 4089; //(short)SampleCount;// (short)samples_per_block;// 4088;// (short)(((blockAlign - (4 * channels)) * 8) / (bitsPerSample * channels) + 1); // 2044;// 
                 addextrafmt = true;
                 fact = true;
@@ -1580,6 +1587,10 @@ namespace CodeWalker.GameFiles
             if (addextrafmt)
             {
                 wavLength += 4;
+            }
+            if (fact)
+            {
+                wavLength += 12;
             }
 
             // RIFF chunk
@@ -1606,7 +1617,7 @@ namespace CodeWalker.GameFiles
             {
                 w.Write("fact".ToCharArray());
                 w.Write((int)4);
-                w.Write((int)samplesPerBlock);
+                w.Write((int)SampleCount);
             }
 
             // data sub-chunk
@@ -3241,7 +3252,11 @@ namespace CodeWalker.GameFiles
 
         public static byte[] EncodeADPCMStandard(byte[] data, int sampleCount)
         {
-            byte[] dataPCM = new byte[data.Length / 4];
+            // each 2048 byte block holds a 4 byte header (1 sample) + 2044 bytes (4088 samples)
+            int totalSamples = data.Length / 2;
+            if (sampleCount > totalSamples) sampleCount = totalSamples;
+            int blockCount = (totalSamples + 4088) / 4089;
+            byte[] dataPCM = new byte[blockCount * 2048];
 
             int predictor = 0, stepIndex = 0;
             int readingOffset = 0, writingOffset = 0, bytesInBlock = 0;

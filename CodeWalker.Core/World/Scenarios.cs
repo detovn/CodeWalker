@@ -47,6 +47,9 @@ namespace CodeWalker.World
 
             var rpfman = gameFileCache.RpfMan;
 
+            var loadedRegionPaths = new HashSet<string>(); //lowercased paths of loaded region ymts, to avoid adding duplicates
+            var loadedRegionNames = new HashSet<string>(); //lowercased file names of loaded region ymts
+
             // Load base game sp_manifest.ymt
             string manifestfilename = "update\\update.rpf\\x64\\levels\\gta5\\sp_manifest.ymt";
             YmtFile manifestymt = rpfman.GetFile<YmtFile>(manifestfilename);
@@ -76,6 +79,14 @@ namespace CodeWalker.World
                         if (sregion != null)
                         {
                             ScenarioRegions.Add(regionymt);
+                            if (regionymt.RpfFileEntry?.Path != null)
+                            {
+                                loadedRegionPaths.Add(regionymt.RpfFileEntry.Path.ToLowerInvariant());
+                            }
+                            if (regionymt.RpfFileEntry?.NameLower != null)
+                            {
+                                loadedRegionNames.Add(regionymt.RpfFileEntry.NameLower.ToLowerInvariant());
+                            }
 
                             ////testing stuff...
 
@@ -125,6 +136,9 @@ namespace CodeWalker.World
                             var name = fentry.NameLower;
                             if (name == "sp_manifest.meta" || name == "sp_manifest.ymt")
                             {
+                                if ((fentry.Path != null) && (fentry.Path.ToLowerInvariant() == manifestfilename.ToLowerInvariant())) continue; //base manifest already loaded above
+                                if ((manifestymt != null) && (manifestymt.RpfFileEntry == fentry)) continue;
+
                                 try
                                 {
                                     CScenarioPointRegionDef[] regionDefs = null;
@@ -205,6 +219,8 @@ namespace CodeWalker.World
 
                                             string regionfilenameLower = regionfilename.ToLowerInvariant();
 
+                                            if (loadedRegionNames.Contains(regionfilenameLower)) continue; //region already loaded (eg. by the base manifest, or another copy of the same file)
+
                                             // Search for the region file across ALL RPFs (including parent DLC RPFs)
                                             YmtFile regionymt = null;
                                             bool found = false;
@@ -217,6 +233,12 @@ namespace CodeWalker.World
                                                 {
                                                     if (regionEntry is RpfFileEntry regionFentry && regionFentry.NameLower == regionfilenameLower)
                                                     {
+                                                        var regionPathLower = regionFentry.Path?.ToLowerInvariant();
+                                                        if ((regionPathLower != null) && loadedRegionPaths.Contains(regionPathLower))
+                                                        {
+                                                            found = true; //already loaded (eg. by the base manifest)
+                                                            break;
+                                                        }
                                                         regionymt = rpfman.GetFile<YmtFile>(regionFentry);
                                                         if (regionymt != null)
                                                         {
@@ -224,6 +246,8 @@ namespace CodeWalker.World
                                                             if (sregion != null)
                                                             {
                                                                 ScenarioRegions.Add(regionymt);
+                                                                if (regionPathLower != null) loadedRegionPaths.Add(regionPathLower);
+                                                                loadedRegionNames.Add(regionfilenameLower);
                                                                 found = true;
                                                                 regionymt = null; // Mark as handled
                                                                 break;

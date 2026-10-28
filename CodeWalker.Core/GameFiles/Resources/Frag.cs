@@ -383,7 +383,7 @@ namespace CodeWalker.GameFiles
             YftXml.ValueTag(sb, indent, "UnknownBC", Unknown_BCh.ToString());
             YftXml.ValueTag(sb, indent, "UnknownC0", Unknown_C0h.ToString());
             YftXml.ValueTag(sb, indent, "UnknownC4", Unknown_C4h.ToString());
-            YftXml.ValueTag(sb, indent, "UnbrokenElasticity", FloatUtil.ToString(UnbrokenElasticity));
+            YftXml.ValueTag(sb, indent, "UnknownCC", FloatUtil.ToString(UnbrokenElasticity));
             YftXml.ValueTag(sb, indent, "GravityFactor", FloatUtil.ToString(GravityFactor));
             YftXml.ValueTag(sb, indent, "BuoyancyFactor", FloatUtil.ToString(BuoyancyFactor));
             if ((Drawable != null) && (Drawable.OwnerCloth == null))
@@ -461,7 +461,7 @@ namespace CodeWalker.GameFiles
             Unknown_BCh = Xml.GetChildIntAttribute(node, "UnknownBC", "value");
             Unknown_C0h = Xml.GetChildIntAttribute(node, "UnknownC0", "value");
             Unknown_C4h = Xml.GetChildIntAttribute(node, "UnknownC4", "value");
-            UnbrokenElasticity = Xml.GetChildFloatAttribute(node, "UnbrokenElasticity", "value");
+            UnbrokenElasticity = Xml.GetChildFloatAttribute(node, "UnknownCC", "value");
             GravityFactor = Xml.GetChildFloatAttribute(node, "GravityFactor", "value");
             BuoyancyFactor = Xml.GetChildFloatAttribute(node, "BuoyancyFactor", "value");
             var dnode = node.SelectSingleNode("Drawable");
@@ -2515,12 +2515,12 @@ namespace CodeWalker.GameFiles
         }
         public void WriteXml(StringBuilder sb, int indent, string ddsfolder)
         {
-            YftXml.ValueTag(sb, indent, "SmallestAngInertia", FloatUtil.ToString(SmallestAngInertia));
-            YftXml.ValueTag(sb, indent, "LargestAngInertia", FloatUtil.ToString(LargestAngInertia));
-            YftXml.ValueTag(sb, indent, "MinMoveForce", FloatUtil.ToString(MinMoveForce));
+            YftXml.ValueTag(sb, indent, "Unknown14", FloatUtil.ToString(SmallestAngInertia));
+            YftXml.ValueTag(sb, indent, "Unknown18", FloatUtil.ToString(LargestAngInertia));
+            YftXml.ValueTag(sb, indent, "Unknown1C", FloatUtil.ToString(MinMoveForce));
             YftXml.SelfClosingTag(sb, indent, "PositionOffset " + FloatUtil.GetVector3XmlString(PositionOffset));
-            YftXml.SelfClosingTag(sb, indent, "OriginalRootCgOffset " + FloatUtil.GetVector3XmlString(OriginalRootCgOffset));
-            YftXml.SelfClosingTag(sb, indent, "UnbrokenCgOffset " + FloatUtil.GetVector3XmlString(UnbrokenCgOffset));
+            YftXml.SelfClosingTag(sb, indent, "Unknown40 " + FloatUtil.GetVector3XmlString(OriginalRootCgOffset));
+            YftXml.SelfClosingTag(sb, indent, "Unknown50 " + FloatUtil.GetVector3XmlString(UnbrokenCgOffset));
             YftXml.SelfClosingTag(sb, indent, "DampingLinearC " + FloatUtil.GetVector3XmlString(DampingLinearC));
             YftXml.SelfClosingTag(sb, indent, "DampingLinearV " + FloatUtil.GetVector3XmlString(DampingLinearV));
             YftXml.SelfClosingTag(sb, indent, "DampingLinearV2 " + FloatUtil.GetVector3XmlString(DampingLinearV2));
@@ -2590,12 +2590,12 @@ namespace CodeWalker.GameFiles
         }
         public void ReadXml(XmlNode node, string ddsfolder)
         {
-            SmallestAngInertia = Xml.GetChildFloatAttribute(node, "SmallestAngInertia", "value");
-            LargestAngInertia = Xml.GetChildFloatAttribute(node, "LargestAngInertia", "value");
-            MinMoveForce = Xml.GetChildFloatAttribute(node, "MinMoveForce", "value");
+            SmallestAngInertia = Xml.GetChildFloatAttribute(node, "Unknown14", "value");
+            LargestAngInertia = Xml.GetChildFloatAttribute(node, "Unknown18", "value");
+            MinMoveForce = Xml.GetChildFloatAttribute(node, "Unknown1C", "value");
             PositionOffset = Xml.GetChildVector3Attributes(node, "PositionOffset");
-            OriginalRootCgOffset = Xml.GetChildVector3Attributes(node, "OriginalRootCgOffset");
-            UnbrokenCgOffset = Xml.GetChildVector3Attributes(node, "UnbrokenCgOffset");
+            OriginalRootCgOffset = Xml.GetChildVector3Attributes(node, "Unknown40");
+            UnbrokenCgOffset = Xml.GetChildVector3Attributes(node, "Unknown50");
             DampingLinearC = Xml.GetChildVector3Attributes(node, "DampingLinearC");
             DampingLinearV = Xml.GetChildVector3Attributes(node, "DampingLinearV");
             DampingLinearV2 = Xml.GetChildVector3Attributes(node, "DampingLinearV2");
@@ -3412,7 +3412,7 @@ namespace CodeWalker.GameFiles
         public float GravityFactor { get; set; } = 1.0f; // 1.0f
         public float MaxSpeed { get; set; } = 150.0f; // 150.0f
         public float MaxAngSpeed { get; set; } = 6.2831855f; // 6.2831855f = 2*pi
-        public float BouyancyFactor { get; set; } = 1.0f; // 1.0f
+        public float BuoyancyFactor { get; set; } = 1.0f; // 1.0f
         public ulong Unknown_58h; // 0x0000000000000000
         public Vector3 InertiaTensor { get; set; }
         public uint Unknown_6Ch = 0x7fc00001; // 0x7fc00001
@@ -3460,7 +3460,7 @@ namespace CodeWalker.GameFiles
             this.GravityFactor = reader.ReadSingle();
             this.MaxSpeed = reader.ReadSingle();
             this.MaxAngSpeed = reader.ReadSingle();
-            this.BouyancyFactor = reader.ReadSingle();
+            this.BuoyancyFactor = reader.ReadSingle();
             this.Unknown_58h = reader.ReadUInt64();
             this.InertiaTensor = reader.ReadVector3();
             this.Unknown_6Ch = reader.ReadUInt32();
@@ -3592,7 +3592,7 @@ namespace CodeWalker.GameFiles
             writer.Write(this.GravityFactor);
             writer.Write(this.MaxSpeed);
             writer.Write(this.MaxAngSpeed);
-            writer.Write(this.BouyancyFactor);
+            writer.Write(this.BuoyancyFactor);
             writer.Write(this.Unknown_58h);
             writer.Write(this.InertiaTensor);
             writer.Write(this.Unknown_6Ch);
@@ -3616,10 +3616,10 @@ namespace CodeWalker.GameFiles
             YftXml.StringTag(sb, indent, "Name", YftXml.XmlEscape(Name));
             YftXml.ValueTag(sb, indent, "Mass", FloatUtil.ToString(Mass));
             YftXml.ValueTag(sb, indent, "MassInv", FloatUtil.ToString(MassInv));
-            YftXml.ValueTag(sb, indent, "GravityFactor", FloatUtil.ToString(GravityFactor));
-            YftXml.ValueTag(sb, indent, "MaxSpeed", FloatUtil.ToString(MaxSpeed));
-            YftXml.ValueTag(sb, indent, "MaxAngSpeed", FloatUtil.ToString(MaxAngSpeed));
-            YftXml.ValueTag(sb, indent, "BouyancyFactor", FloatUtil.ToString(BouyancyFactor));
+            YftXml.ValueTag(sb, indent, "Unknown48", FloatUtil.ToString(GravityFactor));
+            YftXml.ValueTag(sb, indent, "Unknown4C", FloatUtil.ToString(MaxSpeed));
+            YftXml.ValueTag(sb, indent, "Unknown50", FloatUtil.ToString(MaxAngSpeed));
+            YftXml.ValueTag(sb, indent, "Unknown54", FloatUtil.ToString(BuoyancyFactor));
             YftXml.SelfClosingTag(sb, indent, "InertiaTensor " + FloatUtil.GetVector3XmlString(InertiaTensor));
             YftXml.SelfClosingTag(sb, indent, "InertiaTensorInv " + FloatUtil.GetVector3XmlString(InertiaTensorInv));
             if (Bound != null)
@@ -3632,10 +3632,10 @@ namespace CodeWalker.GameFiles
             Name = Xml.GetChildInnerText(node, "Name");
             Mass = Xml.GetChildFloatAttribute(node, "Mass", "value");
             MassInv = Xml.GetChildFloatAttribute(node, "MassInv", "value");
-            GravityFactor = Xml.GetChildFloatAttribute(node, "GravityFactor", "value");
-            MaxSpeed = Xml.GetChildFloatAttribute(node, "MaxSpeed", "value");
-            MaxAngSpeed = Xml.GetChildFloatAttribute(node, "MaxAngSpeed", "value");
-            BouyancyFactor = Xml.GetChildFloatAttribute(node, "BouyancyFactor", "value");
+            GravityFactor = Xml.GetChildFloatAttribute(node, "Unknown48", "value");
+            MaxSpeed = Xml.GetChildFloatAttribute(node, "Unknown4C", "value");
+            MaxAngSpeed = Xml.GetChildFloatAttribute(node, "Unknown50", "value");
+            BuoyancyFactor = Xml.GetChildFloatAttribute(node, "Unknown54", "value");
             InertiaTensor = Xml.GetChildVector3Attributes(node, "InertiaTensor");
             InertiaTensorInv = Xml.GetChildVector3Attributes(node, "InertiaTensorInv");
             var bnode = node.SelectSingleNode("Bounds");
@@ -4249,15 +4249,15 @@ namespace CodeWalker.GameFiles
             YftXml.ValueTag(sb, indent, "Mass", FloatUtil.ToString(Mass));
             YftXml.ValueTag(sb, indent, "MinDamageForce", FloatUtil.ToString(MinDamageForce));
             YftXml.ValueTag(sb, indent, "DamageHealth", FloatUtil.ToString(DamageHealth));
-            YftXml.ValueTag(sb, indent, "WeaponHealth", FloatUtil.ToString(WeaponHealth));
-            YftXml.ValueTag(sb, indent, "WeaponScale", FloatUtil.ToString(WeaponScale));
-            YftXml.ValueTag(sb, indent, "VehicleScale", FloatUtil.ToString(VehicleScale));
-            YftXml.ValueTag(sb, indent, "PedScale", FloatUtil.ToString(PedScale));
-            YftXml.ValueTag(sb, indent, "RagdollScale", FloatUtil.ToString(RagdollScale));
-            YftXml.ValueTag(sb, indent, "ExplosionScale", FloatUtil.ToString(ExplosionScale));
-            YftXml.ValueTag(sb, indent, "ObjectScale", FloatUtil.ToString(ObjectScale));
-            YftXml.ValueTag(sb, indent, "PedInvMassScale", FloatUtil.ToString(PedInvMassScale));
-            YftXml.ValueTag(sb, indent, "MeleeScale", FloatUtil.ToString(MeleeScale));
+            YftXml.ValueTag(sb, indent, "UnkFloat5C", FloatUtil.ToString(WeaponHealth));
+            YftXml.ValueTag(sb, indent, "UnkFloat60", FloatUtil.ToString(WeaponScale));
+            YftXml.ValueTag(sb, indent, "UnkFloat64", FloatUtil.ToString(VehicleScale));
+            YftXml.ValueTag(sb, indent, "UnkFloat68", FloatUtil.ToString(PedScale));
+            YftXml.ValueTag(sb, indent, "UnkFloat6C", FloatUtil.ToString(RagdollScale));
+            YftXml.ValueTag(sb, indent, "UnkFloat70", FloatUtil.ToString(ExplosionScale));
+            YftXml.ValueTag(sb, indent, "UnkFloat74", FloatUtil.ToString(ObjectScale));
+            YftXml.ValueTag(sb, indent, "UnkFloat78", FloatUtil.ToString(PedInvMassScale));
+            YftXml.ValueTag(sb, indent, "UnkFloatA8", FloatUtil.ToString(MeleeScale));
         }
         public void ReadXml(XmlNode node)
         {
@@ -4281,15 +4281,15 @@ namespace CodeWalker.GameFiles
             Mass = Xml.GetChildFloatAttribute(node, "Mass", "value");
             MinDamageForce = Xml.GetChildFloatAttribute(node, "MinDamageForce", "value");
             DamageHealth = Xml.GetChildFloatAttribute(node, "DamageHealth", "value");
-            WeaponHealth = Xml.GetChildFloatAttribute(node, "WeaponHealth", "value");
-            WeaponScale = Xml.GetChildFloatAttribute(node, "WeaponScale", "value");
-            VehicleScale = Xml.GetChildFloatAttribute(node, "VehicleScale", "value");
-            PedScale = Xml.GetChildFloatAttribute(node, "PedScale", "value");
-            RagdollScale = Xml.GetChildFloatAttribute(node, "RagdollScale", "value");
-            ExplosionScale = Xml.GetChildFloatAttribute(node, "ExplosionScale", "value");
-            ObjectScale = Xml.GetChildFloatAttribute(node, "ObjectScale", "value");
-            PedInvMassScale = Xml.GetChildFloatAttribute(node, "PedInvMassScale", "value");
-            MeleeScale = Xml.GetChildFloatAttribute(node, "MeleeScale", "value");
+            WeaponHealth = Xml.GetChildFloatAttribute(node, "UnkFloat5C", "value");
+            WeaponScale = Xml.GetChildFloatAttribute(node, "UnkFloat60", "value");
+            VehicleScale = Xml.GetChildFloatAttribute(node, "UnkFloat64", "value");
+            PedScale = Xml.GetChildFloatAttribute(node, "UnkFloat68", "value");
+            RagdollScale = Xml.GetChildFloatAttribute(node, "UnkFloat6C", "value");
+            ExplosionScale = Xml.GetChildFloatAttribute(node, "UnkFloat70", "value");
+            ObjectScale = Xml.GetChildFloatAttribute(node, "UnkFloat74", "value");
+            PedInvMassScale = Xml.GetChildFloatAttribute(node, "UnkFloat78", "value");
+            MeleeScale = Xml.GetChildFloatAttribute(node, "UnkFloatA8", "value");
         }
 
         public override string ToString()

@@ -394,12 +394,26 @@ namespace CodeWalker
 
         public void ConfigureGame()
         {
+            var oldFolder = GTAFolder.CurrentGTAFolder;
+            var oldGen9 = GTAFolder.IsGen9;
             var result = GTAFolder.UpdateGTAFolder(false, false);
             if (result)
             {
-                MessageBox.Show("CodeWalker will now restart.");
-                Application.Restart();
-                Environment.Exit(0);
+                var changed = !string.Equals(oldFolder, GTAFolder.CurrentGTAFolder, StringComparison.OrdinalIgnoreCase) || (oldGen9 != GTAFolder.IsGen9);
+                if (changed)
+                {
+                    if (MessageBox.Show("CodeWalker needs to restart to apply this change. Restart now?", "Restart required", MessageBoxButtons.YesNo) == DialogResult.Yes)
+                    {
+                        var ce = new System.ComponentModel.CancelEventArgs();
+                        Application.Exit(ce);
+                        if (!ce.Cancel)
+                        {
+                            var args = string.Join(" ", Environment.GetCommandLineArgs().Skip(1).Select(a => "\"" + a.Replace("\"", "\\\"") + "\""));
+                            System.Diagnostics.Process.Start(Application.ExecutablePath, args);
+                            Environment.Exit(0);
+                        }
+                    }
+                }
             }
         }
 
@@ -2394,8 +2408,10 @@ namespace CodeWalker
         {
             try
             {
-                var baseName = Path.GetFileNameWithoutExtension(name);
-                var ext = Path.GetExtension(name);
+                var fname = Path.GetFileName(name);
+                var dotIndex = fname.IndexOf('.');
+                var baseName = (dotIndex > 0) ? fname.Substring(0, dotIndex) : fname;
+                var ext = (dotIndex > 0) ? fname.Substring(dotIndex) : string.Empty; //keep all extensions, eg. x.ytd.xml -> x(1).ytd.xml
                 var candidate = Path.Combine(folder, name);
                 int i = 1;
                 while (File.Exists(candidate))
@@ -4608,7 +4624,7 @@ namespace CodeWalker
         {
             foreach (Form form in Application.OpenForms.Cast<Form>().ToList())
             {
-                if (!(form is ExploreForm))
+                if ((form != this) && !(form is ExploreForm) && !(form is MenuForm))
                 {
                     form.Close();
                 }

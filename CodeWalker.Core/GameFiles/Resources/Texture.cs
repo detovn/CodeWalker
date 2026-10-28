@@ -723,9 +723,12 @@ namespace CodeWalker.GameFiles
         public ushort CalculateStride()
         {
             if (Format == 0) return 0;
-            var dxgifmt = DDSIO.GetDXGIFormat(Format);
+            bool isCompressed;
+            var dxgifmt = DDSIO.GetDXGIFormat(Format, out isCompressed);
             DDSIO.DXTex.ComputePitch(dxgifmt, Width, Height, out var rowPitch, out var slicePitch, 0);
-            return (ushort)rowPitch;
+            // For compressed formats (BC/DXT): convert bytes to DWORD units (divide by 4)
+            // For uncompressed formats: return the original row pitch in bytes
+            return isCompressed ? (ushort)(rowPitch / 4) : (ushort)(rowPitch);
         }
         public TextureFormat GetLegacyFormat(TextureFormatG9 format)
         {
@@ -951,8 +954,7 @@ namespace CodeWalker.GameFiles
                 
                 // Ignore stride loaded from file as it may be incorrect, especially if texture is ATI2 and the file was
                 // previously saved in OpenIV, DDS documentation recommends recalculating this anyway
-                DDSIO.DXTex.ComputePitch(DDSIO.GetDXGIFormat(Format), this.Width, this.Height, out int rowPitch, out int slicePitch, 0);
-                this.Stride = (ushort)rowPitch;
+                this.Stride = CalculateStride();
                 
                 // read reference data
                 this.Data = reader.ReadBlockAt<TextureData>(this.DataPointer, CalcDataSize()); 

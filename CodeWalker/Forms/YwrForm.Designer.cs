@@ -34,10 +34,8 @@
             this.XPosColumn = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.YPosColumn = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.ZPosColumn = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.Unk0Column = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.Unk1Column = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.Unk2Column = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.Unk3Column = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.Flags0Column = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.Flags1Column = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.ExportButton = new System.Windows.Forms.Button();
             this.CopyClipboardButton = new System.Windows.Forms.Button();
             this.saveFileDialog = new System.Windows.Forms.SaveFileDialog();
@@ -64,10 +62,8 @@
             this.XPosColumn,
             this.YPosColumn,
             this.ZPosColumn,
-            this.Unk0Column,
-            this.Unk1Column,
-            this.Unk2Column,
-            this.Unk3Column});
+            this.Flags0Column,
+            this.Flags1Column});
             this.MainListView.HideSelection = false;
             this.MainListView.Location = new System.Drawing.Point(13, 13);
             this.MainListView.Name = "MainListView";
@@ -91,21 +87,15 @@
             this.ZPosColumn.Text = "Position Z";
             this.ZPosColumn.Width = 75;
             // 
-            // Unk0Column
-            // 
-            this.Unk0Column.Text = "Unk0";
-            // 
-            // Unk1Column
-            // 
-            this.Unk1Column.Text = "Unk1";
-            // 
-            // Unk2Column
-            // 
-            this.Unk2Column.Text = "Unk2";
-            // 
-            // Unk3Column
-            // 
-            this.Unk3Column.Text = "Unk3";
+            // Flags0Column
+            //
+            this.Flags0Column.Text = "Flags0";
+            this.Flags0Column.Width = 120;
+            //
+            // Flags1Column
+            //
+            this.Flags1Column.Text = "Flags1";
+            this.Flags1Column.Width = 100;
             // 
             // ExportButton
             // 
@@ -158,10 +148,8 @@
         private System.Windows.Forms.ColumnHeader XPosColumn;
         private System.Windows.Forms.ColumnHeader YPosColumn;
         private System.Windows.Forms.ColumnHeader ZPosColumn;
-        private System.Windows.Forms.ColumnHeader Unk0Column;
-        private System.Windows.Forms.ColumnHeader Unk1Column;
-        private System.Windows.Forms.ColumnHeader Unk2Column;
-        private System.Windows.Forms.ColumnHeader Unk3Column;
+        private System.Windows.Forms.ColumnHeader Flags0Column;
+        private System.Windows.Forms.ColumnHeader Flags1Column;
         private System.Windows.Forms.SaveFileDialog saveFileDialog;
     }
 }

@@ -154,8 +154,23 @@ namespace CodeWalker.GameFiles
         public void ReadXml(XmlNode node)
         {
             Position = Xml.GetChildVector3Attributes(node, "Position");
-            Flags0 = Struct0.FromXml(Xml.GetChild((XmlElement)node, "Flags0"));
-            Flags1 = Struct1.FromXml(Xml.GetChild((XmlElement)node, "Flags1"));
+            var f0node = Xml.GetChild((XmlElement)node, "Flags0");
+            var f1node = Xml.GetChild((XmlElement)node, "Flags1");
+            if ((f0node == null) && (f1node == null) && (node.SelectSingleNode("Unk0") != null))
+            {
+                //legacy format: Unk0..Unk3 ushorts (little endian, so Unk0/Unk2 are the low halves)
+                var unk0 = Xml.GetChildUIntAttribute(node, "Unk0", "value") & 0xFFFF;
+                var unk1 = Xml.GetChildUIntAttribute(node, "Unk1", "value") & 0xFFFF;
+                var unk2 = Xml.GetChildUIntAttribute(node, "Unk2", "value") & 0xFFFF;
+                var unk3 = Xml.GetChildUIntAttribute(node, "Unk3", "value") & 0xFFFF;
+                Flags0 = new Struct0(unk0 | (unk1 << 16));
+                Flags1 = new Struct1(unk2 | (unk3 << 16));
+            }
+            else
+            {
+                Flags0 = Struct0.FromXml(f0node);
+                Flags1 = Struct1.FromXml(f1node);
+            }
         }
 
         public struct Struct0
@@ -194,6 +209,10 @@ namespace CodeWalker.GameFiles
                 f.MoveBlendRatio = (byte)Xml.GetChildUIntAttribute(node, "MoveBlendRatio", "value");
                 return f;
             }
+            public override string ToString()
+            {
+                return Flags.ToString() + ", " + Heading.ToString() + ", " + MoveBlendRatio.ToString();
+            }
         }
 
         public struct Struct1
@@ -231,6 +250,10 @@ namespace CodeWalker.GameFiles
                 f.FreeSpaceOnRight = (byte)Xml.GetChildUIntAttribute(node, "FreeSpaceOnRight", "value");
                 f.Unused = (ushort)Xml.GetChildUIntAttribute(node, "Unused", "value");
                 return f;
+            }
+            public override string ToString()
+            {
+                return FreeSpaceOnLeft.ToString() + ", " + FreeSpaceOnRight.ToString();
             }
         }
     }

@@ -490,7 +490,7 @@ namespace CodeWalker.Project.Panels
                         CurrentMCEntity._Data.parentIndex = pind;
 
                     string parentName = string.Empty;
-                    var parentEntities = CurrentEntity.Ymap.Parent.AllEntities;
+                    var parentEntities = CurrentEntity?.Ymap?.Parent?.AllEntities;
                     if (parentEntities != null && pind >= 0 && pind < parentEntities.Length)
                     {
                         parentName = parentEntities[pind]?.Name ?? string.Empty;
@@ -820,7 +820,8 @@ namespace CodeWalker.Project.Panels
             string parentName = parentEntityTextBox.Text?.Trim();
             if (string.IsNullOrEmpty(parentName)) return;
 
-            var parentEntities = CurrentEntity.Ymap.Parent.AllEntities;
+            var parentEntities = CurrentEntity?.Ymap?.Parent?.AllEntities;
+            if (parentEntities == null) return;
             int newIndex = -1;
 
             for (int i = 0; i < parentEntities.Length; i++)

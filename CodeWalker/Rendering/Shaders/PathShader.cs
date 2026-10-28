@@ -120,7 +120,7 @@ namespace CodeWalker.Rendering
         }
 
 
-        public void RenderBatches(DeviceContext context, List<RenderablePathBatch> batches, Camera camera, ShaderGlobalLights lights, Vector3? excludeNodePosition = null)
+        public void RenderBatches(DeviceContext context, List<RenderablePathBatch> batches, Camera camera, ShaderGlobalLights lights)
         {
             UseDynamicVerts = false;
             SetShader(context);
@@ -162,43 +162,10 @@ namespace CodeWalker.Rendering
             foreach (var batch in batches)
             {
                 if (batch.NodeBuffer == null) continue;
-                if (batch.Nodes == null) continue;
 
-                int nodeCount = batch.Nodes.Length;
+                context.VertexShader.SetShaderResource(0, batch.NodeBuffer.SRV);
 
-                // If we need to exclude a specific node, filter it out
-                if (excludeNodePosition.HasValue && nodeCount > 0)
-                {
-                    var excludePos = excludeNodePosition.Value;
-                    var filteredNodes = new List<Vector4>();
-
-                    foreach (var node in batch.Nodes)
-                    {
-                        // Check if this node matches the position to exclude (with small epsilon for float comparison)
-                        var nodePos = new Vector3(node.X, node.Y, node.Z);
-                        float distSq = (nodePos - excludePos).LengthSquared();
-                        if (distSq > 0.01f) // If not the selected node, include it
-                        {
-                            filteredNodes.Add(node);
-                        }
-                    }
-
-                    // Only render if we have nodes left after filtering
-                    if (filteredNodes.Count > 0)
-                    {
-                        // Create temporary buffer with filtered nodes
-                        var tempBuffer = new GpuSBuffer<Vector4>(context.Device, filteredNodes.ToArray());
-                        context.VertexShader.SetShaderResource(0, tempBuffer.SRV);
-                        cube.DrawInstanced(context, filteredNodes.Count);
-                        tempBuffer.Dispose();
-                    }
-                }
-                else
-                {
-                    // No filtering needed, render all nodes
-                    context.VertexShader.SetShaderResource(0, batch.NodeBuffer.SRV);
-                    cube.DrawInstanced(context, nodeCount);
-                }
+                cube.DrawInstanced(context, batch.Nodes.Length);
             }
 
             UnbindResources(context);

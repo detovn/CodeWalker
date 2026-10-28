@@ -450,8 +450,8 @@ namespace CodeWalker.Forms
             {
                 var item = PlayListView.SelectedItems[0];
                 var audio = item.Tag as AwcStream;
-                var codec = audio.StreamFormat?.Codec ?? audio.FormatChunk?.Codec ?? AwcCodecType.PCM;
-                
+                var codec = audio?.StreamFormat?.Codec ?? audio?.FormatChunk?.Codec ?? AwcCodecType.PCM;
+
                 if (codec == AwcCodecType.MP3)
                     ExportAsFile.Text = "Export as .mp3";
                 if (audio?.MidiChunk != null)

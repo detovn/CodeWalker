@@ -61,7 +61,13 @@ namespace CodeWalker.Project.Panels
 
             UpdateTabVisibility();
 
-            //Selection is now managed externally - removed SelectObject call to support multi-selection
+            if (CurrentScenarioNode != null)
+            {
+                if (ProjectForm.WorldForm != null)
+                {
+                    ProjectForm.WorldForm.SelectObject(CurrentScenarioNode);
+                }
+            }
         }
 
         private void UpdateTabVisibility()
