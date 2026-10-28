@@ -96,33 +96,45 @@ namespace CodeWalker.Project.Panels
             bool alignToSurface = AlignToSurfaceCheckBox.Checked;
 
             var placed = new List<Vector3>();
-            int created = 0;
-            for (int i = 0; i < count; i++)
+            var normals = new List<Vector3>();
+
+            //Space.RayIntersect reuses the shared MapDataStore/BoundsStore VisibleItems lists, which the
+            //render thread also iterates each frame, so the raycasts must happen inside the render lock.
+            lock (wf.RenderSyncRoot)
             {
-                //uniform random point in the brush circle, then drop it onto the ground below.
-                float r = radius * (float)Math.Sqrt(Rand.NextDouble());
-                float a = (float)(Rand.NextDouble() * Math.PI * 2.0);
-                var p = mouseRay.Position + new Vector3((float)Math.Cos(a) * r, (float)Math.Sin(a) * r, 0);
-                var ray = new Ray(p + new Vector3(0, 0, radius + 2.0f), -Vector3.UnitZ);
-                var hit = wf.Raycast(ray);
-                if (!hit.Hit) continue;
-                if (Math.Abs(hit.Position.Z - mouseRay.Position.Z) > (radius * 2.0f + 5.0f)) continue; //probably hit a roof or fell off a cliff
+                for (int i = 0; i < count; i++)
+                {
+                    //uniform random point in the brush circle, then drop it onto the ground below.
+                    float r = radius * (float)Math.Sqrt(Rand.NextDouble());
+                    float a = (float)(Rand.NextDouble() * Math.PI * 2.0);
+                    var p = mouseRay.Position + new Vector3((float)Math.Cos(a) * r, (float)Math.Sin(a) * r, 0);
+                    var ray = new Ray(p + new Vector3(0, 0, radius + 2.0f), -Vector3.UnitZ);
+                    var hit = wf.Raycast(ray);
+                    if (!hit.Hit) continue;
+                    if (Math.Abs(hit.Position.Z - mouseRay.Position.Z) > (radius * 2.0f + 5.0f)) continue; //probably hit a roof or fell off a cliff
 
-                var normal = Vector3.Normalize(hit.Normal);
-                if (normal.Z < minSlopeCos) continue; //too steep
+                    var normal = Vector3.Normalize(hit.Normal);
+                    if (normal.Z < minSlopeCos) continue; //too steep
 
-                var pos = hit.Position + new Vector3(0, 0, zOffset);
-                if (IsTooClose(pos, spacing, ymap, placed)) continue;
+                    var pos = hit.Position + new Vector3(0, 0, zOffset);
+                    if (IsTooClose(pos, spacing, ymap, placed)) continue;
 
+                    placed.Add(pos);
+                    normals.Add(normal);
+                }
+            }
+
+            int created = 0;
+            for (int i = 0; i < placed.Count; i++)
+            {
                 var arch = archetypes[Rand.Next(archetypes.Count)];
                 float yaw = randomYaw ? (float)(Rand.NextDouble() * Math.PI * 2.0) : 0.0f;
-                var ori = GetOrientation(alignToSurface ? normal : Vector3.UnitZ, yaw);
+                var ori = GetOrientation(alignToSurface ? normals[i] : Vector3.UnitZ, yaw);
                 float scale = scaleMin + (float)Rand.NextDouble() * (scaleMax - scaleMin);
 
-                var ent = ProjectForm.PaintEntity(ymap, arch, pos, ori, scale);
+                var ent = ProjectForm.PaintEntity(ymap, arch, placed[i], ori, scale);
                 if (ent != null)
                 {
-                    placed.Add(pos);
                     created++;
                 }
             }
