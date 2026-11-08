@@ -113,6 +113,13 @@ Turn it off with the **Precise (polygons)** checkbox on the Selection tab.
 ### Better grass selection (written for this fork)
 In grass selection mode, clicking now picks the batch that owns the blade under the cursor instead of the biggest box.
 
+### MCP server for Claude (written for this fork)
+`CodeWalker.Mcp` exposes CodeWalker's engine as tools Claude can call. It can search game files and models, check
+what's placed at a spot, snap to ground, create and edit ymaps, build a ytyp from a folder of models, convert to and
+from XML, extract files, pack RPFs and write a `.cwproj` to open in CodeWalker. It runs without the window, and the
+GTA folder comes from CodeWalker's saved settings. See `CodeWalker.Mcp/README.md`. Built copy:
+`Build/CodeWalker.Mcp/CodeWalker.Mcp.exe`.
+
 ### Command-line tool (upstream #386)
 A new `CodeWalker.Cli` program that works without the window: list, extract, search, pack, diff and validate RPF archives;
 export to XML, DDS, WAV and text; convert Gen9 files; compute hashes. It comes with its own test suite (533 tests, all

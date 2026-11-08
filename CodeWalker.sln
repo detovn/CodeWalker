@@ -31,6 +31,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CodeWalker.Cli", "CodeWalke
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodeWalker.Cli.Tests", "CodeWalker.Cli\CodeWalker.Cli.Tests.csproj", "{414B22C4-53F2-4F7D-841B-B1AA8461F213}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodeWalker.Mcp", "CodeWalker.Mcp\CodeWalker.Mcp.csproj", "{AB41EE1B-F2BE-4547-8053-039E5F38F72C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -184,11 +186,21 @@ Global
 		{414B22C4-53F2-4F7D-841B-B1AA8461F213}.Release|x64.Build.0 = Release|Any CPU
 		{414B22C4-53F2-4F7D-841B-B1AA8461F213}.Release|x86.ActiveCfg = Release|Any CPU
 		{414B22C4-53F2-4F7D-841B-B1AA8461F213}.Release|x86.Build.0 = Release|Any CPU
+		{AB41EE1B-F2BE-4547-8053-039E5F38F72C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AB41EE1B-F2BE-4547-8053-039E5F38F72C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AB41EE1B-F2BE-4547-8053-039E5F38F72C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{AB41EE1B-F2BE-4547-8053-039E5F38F72C}.Debug|x64.Build.0 = Debug|Any CPU
+		{AB41EE1B-F2BE-4547-8053-039E5F38F72C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{AB41EE1B-F2BE-4547-8053-039E5F38F72C}.Debug|x86.Build.0 = Debug|Any CPU
+		{AB41EE1B-F2BE-4547-8053-039E5F38F72C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AB41EE1B-F2BE-4547-8053-039E5F38F72C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AB41EE1B-F2BE-4547-8053-039E5F38F72C}.Release|x64.ActiveCfg = Release|Any CPU
+		{AB41EE1B-F2BE-4547-8053-039E5F38F72C}.Release|x64.Build.0 = Release|Any CPU
+		{AB41EE1B-F2BE-4547-8053-039E5F38F72C}.Release|x86.ActiveCfg = Release|Any CPU
+		{AB41EE1B-F2BE-4547-8053-039E5F38F72C}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {5D6153C2-98D1-4C3D-9232-4C2BEEAEC8E0}
